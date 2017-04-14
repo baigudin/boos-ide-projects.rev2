@@ -53,29 +53,21 @@ public:
    * @param source  available interrupt source.     
    * @return target processor interrupt interface.
    */
-  static ::Interrupt* create(::InterruptTask& handler, int32 source)
-  {
-    return NULL;
-  }
+  static ::Interrupt* create(::InterruptTask& handler, int32 source);
   
   /**
    * Disables all maskable interrupts.
    *
    * @return global interrupts enable bit value before method was called.
    */
-  static bool globalDisable()
-  {
-    return false;
-  }
+  static bool globalDisable();
   
   /**
    * Enables all maskable interrupts.
    *
    * @param status the returned status by disable method.
    */
-  static void globalEnable(bool status)
-  {
-  }  
+  static void globalEnable(bool status);
   
   /**
    * Enables all maskable interrupts.
@@ -89,7 +81,22 @@ public:
   {
     globalEnable(status);
     return ret;   
-  }    
+  }
+  
+  /**
+   * Initializes the driver.
+   *
+   * @param sourceClock source clock in Hz.    
+   * @param cpuClock    requesting CPU clock in Hz.
+   * @return true if no errors are occurred.
+   */
+  static bool init(int32 sourceClock, int32 cpuClock);
+  
+  /**
+   * Deinitializes the driver.
+   */
+  static void deinit();
+      
   
 };
 #endif // BOOS_TARGET_INTERRUPT_HPP_

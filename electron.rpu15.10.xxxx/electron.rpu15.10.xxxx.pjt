@@ -1,7 +1,7 @@
 ; Code Composer Project File, Version 2.0 (do not modify or remove this line)
 
 [Project Settings]
-ProjectDir=""
+ProjectDir="D:\baigudin\github\baigudin\boos-projects\electron.rpu15.10.xxxx\"
 ProjectType=Executable
 CPUFamily=TMS320C28XX
 Tool="Compiler"
@@ -12,9 +12,15 @@ Config="Debug"
 Config="Release"
 
 [Source Files]
+Source="..\..\boos-core.rev3\libraries\boos.ti.tms320f2833x.coff.debug.lib"
+Source="Debug\rpu15.10.debug.map"
+Source="Source\boos\boos.Board.cpp"
+Source="Source\boos\boos.Configuration.cpp"
+Source="Source\boos\boos.Main.cpp"
 Source="Source\driver\source\driver.Adc.cpp"
 Source="Source\driver\source\driver.Adc.ll.asm"
 Source="Source\driver\source\driver.FullBridge.cpp"
+Source="Source\driver\source\driver.Interrupt.cpp"
 Source="Source\driver\source\driver.Pll.cpp"
 Source="Source\driver\source\driver.Pwm.cpp"
 Source="Source\driver\source\driver.System.ll.asm"
@@ -24,7 +30,7 @@ Source="Source\main.rpu15.10.4810.cpp"
 Source="Source\cmd\memory.rpu15.10.cmd"
 
 ["Compiler" Settings: "Debug"]
-Options=-g -fr"$(Proj_dir)\Debug" -ff"$(Proj_dir)\Debug" -i"$(Proj_dir)\Source\driver\include" -ml -v28 --float_support=fpu32
+Options=-g -fr"$(Proj_dir)\Debug" -ff"$(Proj_dir)\Debug" -i"$(Proj_dir)\Source\driver\include" -i"$(Proj_dir)\..\..\boos-core.rev3\boos\include" -d"BOOS_TYPE_WIDTH_LP32" -ml -v28 --float_support=fpu32
 
 ["Compiler" Settings: "Release"]
 Options=-g -o3 -fr"$(Proj_dir)\Release" -ff"$(Proj_dir)\Release" -i"$(Proj_dir)\Source\driver\include" -d"LARGE_MODEL" -ml -v28 --float_support=fpu32
@@ -34,6 +40,12 @@ Options=-c -m".\Debug\rpu15.10.debug.map" -o".\Debug\rpu15.10.debug.out" -w -x
 
 ["Linker" Settings: "Release"]
 Options=-c -m".\Release\rpu15.10.map" -o".\Release\rpu15.10.out" -w -x
+
+["Debug\rpu15.10.debug.map" Settings: "Debug"]
+ExcludeFromBuild=true
+
+["Debug\rpu15.10.debug.map" Settings: "Release"]
+ExcludeFromBuild=true
 
 ["Source\driver\source\driver.Pll.cpp" Settings: "Release"]
 Options="Compiler" -{-o3}

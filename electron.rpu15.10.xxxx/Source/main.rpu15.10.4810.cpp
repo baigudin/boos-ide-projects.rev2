@@ -4,6 +4,7 @@
  * @author    Sergey Baigudin, sergey@baigudin.software
  */
 #include "driver.Pll.hpp" 
+#include "driver.Interrupt.hpp"
 #include "driver.Pwm.hpp"
 #include "driver.Adc.hpp"
 
@@ -60,7 +61,7 @@ static void executeAdcTask(Adc& adc)
  *
  * @return error code or zero.
  */   
-int main()
+int mainBoard()
 {
   volatile bool exe = true;
   bool res = false;
@@ -72,6 +73,8 @@ int main()
   const int32 sysclk = 150000000;  
   // Initialize the PLL driver
   if( not Pll::init(oscclk, sysclk) ) return -1;
+  // Initialize the Interrupt driver
+  if( not Interrupt::init(oscclk, sysclk) ) return -1;  
   // Initialize the PWM driver
   if( not Pwm::init(oscclk) ) return -1;
   // Initialize the ADC driver
