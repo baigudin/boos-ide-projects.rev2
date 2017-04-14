@@ -1,0 +1,46 @@
+; Code Composer Project File, Version 2.0 (do not modify or remove this line)
+
+[Project Settings]
+ProjectDir=""
+ProjectType=Executable
+CPUFamily=TMS320C28XX
+Tool="Compiler"
+Tool="CustomBuilder"
+Tool="DspBiosBuilder"
+Tool="Linker"
+Config="Debug"
+Config="Release"
+
+[Source Files]
+Source="Source\driver\source\driver.Adc.cpp"
+Source="Source\driver\source\driver.Adc.ll.asm"
+Source="Source\driver\source\driver.FullBridge.cpp"
+Source="Source\driver\source\driver.Pll.cpp"
+Source="Source\driver\source\driver.Pwm.cpp"
+Source="Source\driver\source\driver.System.ll.asm"
+Source="Source\libraries\rts2800_fpu32.lib"
+Source="Source\libraries\SFO_TI_Build_V5B_fpu.lib"
+Source="Source\main.rpu15.10.4810.cpp"
+Source="Source\cmd\memory.rpu15.10.cmd"
+
+["Compiler" Settings: "Debug"]
+Options=-g -fr"$(Proj_dir)\Debug" -ff"$(Proj_dir)\Debug" -i"$(Proj_dir)\Source\driver\include" -ml -v28 --float_support=fpu32
+
+["Compiler" Settings: "Release"]
+Options=-g -o3 -fr"$(Proj_dir)\Release" -ff"$(Proj_dir)\Release" -i"$(Proj_dir)\Source\driver\include" -d"LARGE_MODEL" -ml -v28 --float_support=fpu32
+
+["Linker" Settings: "Debug"]
+Options=-c -m".\Debug\rpu15.10.debug.map" -o".\Debug\rpu15.10.debug.out" -w -x
+
+["Linker" Settings: "Release"]
+Options=-c -m".\Release\rpu15.10.map" -o".\Release\rpu15.10.out" -w -x
+
+["Source\driver\source\driver.Pll.cpp" Settings: "Release"]
+Options="Compiler" -{-o3}
+
+["Source\cmd\memory.rpu15.10.cmd" Settings: "Debug"]
+LinkOrder=1
+
+["Source\cmd\memory.rpu15.10.cmd" Settings: "Release"]
+LinkOrder=1
+
