@@ -3,8 +3,8 @@
  * 
  * @author    Sergey Baigudin, sergey@baigudin.software
  */
-#include "boos.driver.Interrupt.hpp"
 #include "driver.Interrupt.hpp"
+#include "driver.InterruptController.hpp"
 
 /**
  * Returns the interrupt interface of a target processor.
@@ -15,12 +15,11 @@
  */
 ::Interrupt* Interrupt::create(::InterruptTask& handler, int32 source)
 {
-  //::driver::Interrupt::Resource res;
-  //res.handler = &handler;
-  //res.source = source;
-  // TODO interrupt controller class
-  //return ::driver::Interrupt::create(res);
-  return NULL;
+  InterruptController* res = new InterruptController(handler, source);
+  if(res == NULL) return NULL;
+  if(res->isConstructed()) return res;
+  delete res;
+  return NULL;   
 }
 
 /**
@@ -30,7 +29,7 @@
  */
 bool Interrupt::globalDisable()
 {
-  return ::driver::Interrupt::globalDisable();
+  return InterruptController::globalDisable();
 }
 
 /**
@@ -40,7 +39,7 @@ bool Interrupt::globalDisable()
  */
 void Interrupt::globalEnable(bool status)
 {
-  ::driver::Interrupt::globalEnable(status);
+  InterruptController::globalEnable(status);
 }
 
 /**
@@ -52,7 +51,7 @@ void Interrupt::globalEnable(bool status)
  */
 bool Interrupt::init(int32 sourceClock, int32 cpuClock)
 {
-  return true;
+  return InterruptController::init(sourceClock, cpuClock);
 }
 
 /**
@@ -60,5 +59,6 @@ bool Interrupt::init(int32 sourceClock, int32 cpuClock)
  */
 void Interrupt::deinit()
 {
+  return InterruptController::deinit();
 }
 

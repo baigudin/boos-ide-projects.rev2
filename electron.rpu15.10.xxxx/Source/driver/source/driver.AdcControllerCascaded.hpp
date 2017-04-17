@@ -125,7 +125,8 @@ private:
      * Constructor.
      */   
     SequenceController() : Parent(),
-      task_ (NULL){
+      task_            (NULL),
+      isTaskCompleted_ (false){
       setConstruct( false );
     }
     
@@ -134,7 +135,8 @@ private:
      * Constructor.
      */   
     SequenceController(Mutexs& mutex) : Parent(mutex),
-      task_ (NULL){
+      task_            (NULL),
+      isTaskCompleted_ (false){
       setConstruct( construct() );
     }
     
@@ -151,7 +153,7 @@ private:
      * @param task a new task for sampling.
      * @return true if the task has been set successfully.
      */
-    virtual bool setTask(const TaskInterface& task)
+    virtual bool setTask(TaskInterface& task)
     {
       if( not isConstructed() ) return false;
       if( not mutex_->res.lock() ) return false;     
@@ -175,6 +177,9 @@ private:
       bool res = false;
       do{
         if( task_ == NULL ) break;
+        isTaskCompleted_ = false;
+        int_->enable();
+        regAdc_->adctrl2.bit.intEnaSeq1 = 1;
         regAdc_->adctrl2.bit.socSeq1 = 1;        
         res = true;
       }while(false);      
@@ -188,8 +193,24 @@ private:
      */
     virtual bool waitResult()
     {
-      return false;
+      if( not isConstructed() ) return false;
+      if( not mutex_->res.lock() ) return false;     
+      while( not isTaskCompleted_ );
+      int32 channels = task_->getChannelsNumber() << 1;
+      int32* results = task_->getResults();
+      for(int32 i=0; i<channels; i++)
+        results[i] = regAdcDma_->adcresult[i].val;
+      int_->disable();      
+      return mutex_->res.unlock(true);        
     }
+  
+    /**
+     * The method with self context.
+     */  
+    virtual void handler()
+    {
+      isTaskCompleted_ = true;
+    }  
     
     /**
      * Operator new.
@@ -211,11 +232,11 @@ private:
      * @param task a task.
      * @return true if the task has been registered.
      */
-    bool registerTask(const TaskInterface& task)
+    bool registerTask(TaskInterface& task)
     {
       int32 number = task.getChannelsNumber();
       if(number < 1 || number > CHANNELS_NUMBER) return false;
-      const int32* channel = task.getChannels();
+      int32* channel = task.getChannels();
       for(int32 i=0; i<number; i++)
       {
         int32 chn = channel[i];
@@ -256,7 +277,8 @@ private:
     bool construct()
     { 
       if( not isConstructed() ) return false;
-      return true;
+      int_ = Interrupt::create(*this, ADC_SEQ1INT);
+      return int_ == NULL ? false : true;
     }
     
     /**
@@ -267,7 +289,12 @@ private:
     /**
      * The sampling task.
      */    
-    const TaskInterface* task_;
+    TaskInterface* task_;
+
+    /**
+     * The task completed flag.
+     */        
+    volatile bool isTaskCompleted_;
       
   };
   

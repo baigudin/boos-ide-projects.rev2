@@ -82,14 +82,14 @@ public:
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual const int32* getChannels() const = 0;
+    virtual int32* getChannels() = 0;
     
     /**
      * Returns an array of sampling results.
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    virtual const int32* getResults() const = 0;
+    virtual int32* getResults() = 0;
     
     
   }; 
@@ -111,7 +111,7 @@ public:
     /**
      * The result of sampled channels.
      */    
-    mutable int32 result[CHANNELS << 1];     
+    int32 result[CHANNELS << 1];     
 
   };  
   
@@ -129,7 +129,7 @@ public:
     /**
      * Constructor.
      */  
-    Task(const TaskData<CHANNELS>& data) :
+    Task(TaskData<CHANNELS>& data) :
       data_ (&data){
     }      
 
@@ -153,7 +153,7 @@ public:
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual const int32* getChannels() const
+    virtual int32* getChannels()
     {
       return data_->channel;
     }    
@@ -163,7 +163,7 @@ public:
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    virtual const int32* getResults() const
+    virtual int32* getResults()
     {
       return data_->result;
     }    
@@ -173,7 +173,7 @@ public:
     /**
      * The task.
      */    
-    const TaskData<CHANNELS>* data_;
+    TaskData<CHANNELS>* data_;
     
   };
   
@@ -191,7 +191,7 @@ public:
      * @param task a new task for sampling.
      * @return true if the task has been set successfully.
      */
-    virtual bool setTask(const TaskInterface& task) = 0;
+    virtual bool setTask(TaskInterface& task) = 0;
     
     /**
      * Starts the sampling task of the ADC module.

@@ -1602,5 +1602,35 @@ protected:
   Toggle key_[KEYS_NUMBER];
  
 };
-#endif // DRIVER_PWM_CONTROLLER_HPP_
 
+/**
+ * Locked PWM flags (no boot).
+ */
+bool PwmController::lock_[PwmController::RESOURCES_NUMBER];
+
+/**
+ * CPU clock in Hz (no boot).
+ */
+int32 PwmController::sysclk_;
+
+/**
+ * System Control Registers (no boot).
+ */  
+SystemRegister* PwmController::regSys_;
+
+/**
+ * GPIO Registers (no boot).
+ */  
+GpioRegister* PwmController::regGpio_;
+
+/**
+ * Mutex of this driver (no boot).
+ */  
+Mutex* PwmController::drvMutex_;
+  
+/**
+ * Driver has been initialized successfully (no boot).
+ */
+int32 PwmController::isInitialized_;
+
+#endif // DRIVER_PWM_CONTROLLER_HPP_

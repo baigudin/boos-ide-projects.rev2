@@ -4,9 +4,11 @@
  * @author    Sergey Baigudin, sergey@baigudin.software
  */
 #include "driver.Adc.hpp"
-//#include "driver.AdcControllerSequential.hpp"
 #include "driver.AdcControllerCascaded.hpp"
-//#include "driver.AdcControllerDual.hpp"
+#ifdef BOOS_ISDOING
+#include "driver.AdcControllerDual.hpp"
+#include "driver.AdcControllerSequential.hpp"
+#endif // BOOS_ISDOING
 
 /**
  * Returns the driver resource interface.
@@ -20,9 +22,11 @@
   AdcController* res;
   switch(mode)
   {
-  //case Adc::SEQUENTIAL            : res = new AdcControllerSequential(clock); break;
     case Adc::SIMULTANEOUS_CASCADED : res = new AdcControllerCascaded(clock);   break;
-  //case Adc::SIMULTANEOUS_DUAL     : res = new AdcControllerDual(clock);       break;
+    #ifdef BOOS_ISDOING
+    case Adc::SIMULTANEOUS_DUAL     : res = new AdcControllerDual(clock);       break;
+    case Adc::SEQUENTIAL            : res = new AdcControllerSequential(clock); break;  
+    #endif // BOOS_ISDOING
     default: res = NULL; break;
   }
   if(res == NULL) return NULL;
@@ -49,30 +53,4 @@ void Adc::deinit()
 {
   AdcController::deinit();
 }
-
-/**
- * Locked PWM flags (no boot).
- */
-bool AdcController::lock_[AdcController::RESOURCES_NUMBER];
-
-/**
- * CPU clock in Hz (no boot).
- */
-int32 AdcController::sysclk_;
-
-/**
- * System Control Registers (no boot).
- */  
-SystemRegister* AdcController::regSys_;
-
-/**
- * Mutex of this driver (no boot).
- */  
-Mutex* AdcController::drvMutex_;
-  
-/**
- * Driver has been initialized successfully (no boot).
- */
-int32 AdcController::isInitialized_;
-
 

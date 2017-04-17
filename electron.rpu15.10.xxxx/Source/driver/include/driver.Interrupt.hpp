@@ -30,7 +30,7 @@ public:
    *
    * @param status returned status by disable method.
    */    
-  virtual void enable(bool status) = 0;
+  virtual void enable(bool status=true) = 0;
   
   /** 
    * Enables a controller.
@@ -67,7 +67,7 @@ public:
    *
    * @param status the returned status by disable method.
    */
-  static void globalEnable(bool status);
+  static void globalEnable(bool status=true);
   
   /**
    * Enables all maskable interrupts.
@@ -96,7 +96,6 @@ public:
    * Deinitializes the driver.
    */
   static void deinit();
-      
   
 };
 #endif // BOOS_TARGET_INTERRUPT_HPP_

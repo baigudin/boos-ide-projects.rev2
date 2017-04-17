@@ -307,18 +307,29 @@ protected:
   /**
    * The ADC Sequence.
    */
-  class SequenceController : public ::Object, public ::Adc::Sequence
+  class SequenceController : public ::Object, public ::Adc::Sequence, public ::InterruptTask
   {
     typedef ::Object Parent;  
   
   public:
   
     /**
+     * Available interrupt sources.
+     */
+    enum Source 
+    {
+      ADC_SEQ1INT = 0x0000,
+      ADC_SEQ2INT = 0x0010,
+      ADC_ADCINT  = 0x0050
+    };
+  
+    /**
      * Constructor.
      */   
     SequenceController() : Parent(),
       regAdc_ (NULL),
-      mutex_  (NULL){
+      mutex_  (NULL),
+      int_    (NULL){
       setConstruct( false );
     }  
   
@@ -336,6 +347,16 @@ protected:
      */                               
     virtual ~SequenceController()
     {
+    }
+    
+    /**
+     * Tests if this object has been constructed.
+     *
+     * @return true if object has been constructed successfully.
+     */    
+    virtual bool isConstructed() const
+    {
+      return this->Parent::isConstructed();
     }
     
   private:
@@ -370,7 +391,11 @@ protected:
      * The driver and the resource mutexs.
      */  
     Mutexs* mutex_;
-      
+    
+    /**
+     * The interrupt driver.
+     */  
+    Interrupt* int_;    
   };  
 
   /**
@@ -434,5 +459,31 @@ protected:
   Mutexs mutex_;  
 
 };
+
+/**
+ * Locked PWM flags (no boot).
+ */
+bool AdcController::lock_[AdcController::RESOURCES_NUMBER];
+
+/**
+ * CPU clock in Hz (no boot).
+ */
+int32 AdcController::sysclk_;
+
+/**
+ * System Control Registers (no boot).
+ */  
+SystemRegister* AdcController::regSys_;
+
+/**
+ * Mutex of this driver (no boot).
+ */  
+Mutex* AdcController::drvMutex_;
+  
+/**
+ * Driver has been initialized successfully (no boot).
+ */
+int32 AdcController::isInitialized_;
+
 #endif // DRIVER_ADC_CONTROLLER_HPP_
 

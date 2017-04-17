@@ -7,7 +7,7 @@
  * @link      http://baigudin.software
  */
 -heap  0x1000
--stack 0x1000
+-stack 0x1800
 
 MEMORY
 {
@@ -44,15 +44,17 @@ SECTIONS
 
   /** Allocate program areas */
   .special   : {
-                 ./Debug/driver.Adc.obj            (.text)
-                 ./Debug/driver.Adc.ll.obj         (.text)
-                 ./Debug/driver.FullBridge.obj     (.text)
-                 ./Debug/driver.Interrupt.obj      (.text)
-                 ./Debug/driver.Pll.obj            (.text)
-                 ./Debug/driver.Pwm.obj            (.text)
-                 ./Debug/driver.System.ll.obj      (.text)
-                 ./Debug/main.rpu15.10.4810.obj    (.text)
-                 ./Debug/boos.Board.obj            (.text)                                  
+                 "./Debug/driver.Adc.obj"         (.text)
+                 "./Debug/driver.Adc.ll.obj"      (.text)
+                 "./Debug/driver.FullBridge.obj"  (.text)
+                 "./Debug/driver.Interrupt.obj"   (.text)
+                 "./Debug/driver.Pll.obj"         (.text)
+                 "./Debug/driver.Pwm.obj"         (.text)
+                 "./Debug/driver.System.ll.obj"   (.text)
+                 "./Debug/main.rpu15.10.4810.obj" (.text)
+                 "./Debug/boos.Board.obj"         (.text)
+                 "../../boos-core.rev3/libraries/boos.ti.tms320f2833x.coff.debug.lib" <boos.driver.Interrupt.obj>    (.text)
+                 "../../boos-core.rev3/libraries/boos.ti.tms320f2833x.coff.debug.lib" <boos.driver.Interrupt.ll.obj> (.text)
                } 
                > RAM,     PAGE = 0
   .text      : > FLASHA,  PAGE = 0                  

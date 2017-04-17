@@ -14,6 +14,11 @@ class InterruptTask : public ::api::Task
   
 public:
 
+  /**
+   * Constructor.
+   */   
+  InterruptTask(){}
+
   /** 
    * Destructor.
    */

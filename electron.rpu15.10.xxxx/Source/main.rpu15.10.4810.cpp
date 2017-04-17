@@ -79,6 +79,8 @@ int mainBoard()
   if( not Pwm::init(oscclk) ) return -1;
   // Initialize the ADC driver
   if( not Adc::init(oscclk) ) return -1;  
+  // Enable global interrupts
+  Interrupt::globalEnable();
   // Create a PWM resources
   pwm = Pwm::create(sysclk, 1, Pwm::UP);
   // Create ACD ADCINA0 channel resource and desire setting ADCCLK 25 MHz
