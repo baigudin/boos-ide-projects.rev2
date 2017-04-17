@@ -77,9 +77,9 @@ private:
     bool res = false;
     do{
       // Set simultaneous sampling mode
-      regAdc_->adctrl3.bit.smodeSel = 1;    
+      regAdc_->ctrl3.bit.smodeSel = 1;    
       // Cascaded mode. SEQ1 and SEQ2 operate as a single 16-state sequencer
-      regAdc_->adctrl1.bit.seqCasc = 1;
+      regAdc_->ctrl1.bit.seqCasc = 1;
       // Sequences initialization
       bool isSeq = true;
       for(int32 i=0; i<SEQUENCES_NUMBER; i++)
@@ -166,11 +166,11 @@ private:
     }
     
     /**
-     * Starts the sampling task of the ADC module.
+     * Triggers software start of conversion sequence.
      *
-     * @return true if the task has been set successfully.
+     * @return true if the trigger has been successful.
      */
-    virtual bool startTask()
+    virtual bool trigger()
     {
       if( not isConstructed() ) return false;
       if( not mutex_->res.lock() ) return false;     
@@ -178,9 +178,8 @@ private:
       do{
         if( task_ == NULL ) break;
         isTaskCompleted_ = false;
-        int_->enable();
-        regAdc_->adctrl2.bit.intEnaSeq1 = 1;
-        regAdc_->adctrl2.bit.socSeq1 = 1;        
+        // Start task
+        regAdc_->ctrl2.bit.socSeq1 = 1;        
         res = true;
       }while(false);      
       return mutex_->res.unlock(res);        
@@ -196,11 +195,10 @@ private:
       if( not isConstructed() ) return false;
       if( not mutex_->res.lock() ) return false;     
       while( not isTaskCompleted_ );
-      int32 channels = task_->getChannelsNumber() << 1;
-      int32* results = task_->getResults();
+      const int32 channels = task_->getChannelsNumber() << 1;
+      int32* results = const_cast<int32*>(task_->getResults());
       for(int32 i=0; i<channels; i++)
-        results[i] = regAdcDma_->adcresult[i].val;
-      int_->disable();      
+        results[i] = regAdcDma_->result[i].val;
       return mutex_->res.unlock(true);        
     }
   
@@ -210,6 +208,10 @@ private:
     virtual void handler()
     {
       isTaskCompleted_ = true;
+      // Reset sequencer to state CONV00
+      regAdc_->ctrl2.bit.rstSeq1 = 1;
+      // Clears the SEQ1 interrupt flag bit
+      regAdc_->st.bit.intSeq1Clr = 1;
     }  
     
     /**
@@ -236,7 +238,7 @@ private:
     {
       int32 number = task.getChannelsNumber();
       if(number < 1 || number > CHANNELS_NUMBER) return false;
-      int32* channel = task.getChannels();
+      const int32* channel = task.getChannels();
       for(int32 i=0; i<number; i++)
       {
         int32 chn = channel[i];
@@ -247,7 +249,7 @@ private:
         }
         return false;
       }
-      regAdc_->adcmaxconv.bit.maxConv1 = number - 1;
+      regAdc_->maxconv.bit.maxConv1 = number - 1;
       task_ = &task;      
       return true;    
     }
@@ -258,7 +260,7 @@ private:
     void registerChannel(int32 index, int32 channel)
     {
       int32 seq = (index >> 2) & 0x1;
-      AdcRegister::Adcchselseq* reg = &regAdc_->adcchselseq[seq];
+      AdcRegister::Chselseq* reg = &regAdc_->chselseq[seq];
       switch(index & 0x3)
       {
         case  0: reg->bit.conv0 = channel & 0xf; break;
@@ -277,7 +279,13 @@ private:
     bool construct()
     { 
       if( not isConstructed() ) return false;
+      // Create the ADC interrupt source resource
       int_ = Interrupt::create(*this, ADC_SEQ1INT);
+      int_->enable();
+      // Interrupt request by INT_SEQ1 is enabled
+      regAdc_->ctrl2.bit.intEnaSeq1 = 1; 
+      // INT_SEQ1 is set at the end of every SEQ1 sequence
+      regAdc_->ctrl2.bit.intModSeq1 = 0;
       return int_ == NULL ? false : true;
     }
     

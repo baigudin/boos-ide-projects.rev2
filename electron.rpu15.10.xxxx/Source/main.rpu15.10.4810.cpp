@@ -43,16 +43,20 @@ static bool startPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1
  */   
 static void executeAdcTask(Adc& adc)
 {
-  // Set task for A_I || A_U and C_I || C_U
-  Adc::TaskData<ADC_CHANNELS> data = {{Adc::A3B3, Adc::A2B2}};
-  Adc::Task<ADC_CHANNELS> task(data);
+  // Set Ia || Ua and Ic || Uc conversions
+  int32 channel[2] = {Adc::A3B3, Adc::A2B2};
+  Adc::Task<ADC_CHANNELS, 3> task(channel);
   // Test the number of ADC sequences
   if(adc.getSequencesNumber() != 1) return;
   // Get the first ADC sequencer
   Adc::Sequence& seq = adc.getSequence(0);
   if( not seq.setTask(task) ) return;
-  if( not seq.startTask() ) return;  
-  if( not seq.waitResult() ) return;
+  volatile bool exec = true;  
+  while(exec == true)
+  {
+    if( not seq.trigger() ) return;  
+    if( not seq.waitResult() ) return;
+  }
   asm(" nop");
 }
 

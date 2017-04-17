@@ -45,9 +45,9 @@ public:
     // Disable ADC clock 
     regSys_->pclkcr0.bit.adcenclk = 0;    
     // Power down the bandgap and reference circuitry inside the analog core
-    regAdc_->adctrl3.bit.adcbgrfdn = 0x0;
+    regAdc_->ctrl3.bit.adcbgrfdn = 0x0;
     // Power down the the analog circuitry inside the analog core
-    regAdc_->adctrl3.bit.adcpwdn = 0x0;      
+    regAdc_->ctrl3.bit.adcpwdn = 0x0;      
     regAdc_ = NULL;
     mutex_.drv.unlock();
   }
@@ -189,18 +189,18 @@ private:
       // Set ADC HISPCP
       regSys_->hispcp.bit.hspclk = hsp;
       // Emulation suspend is ignored
-      regAdc_->adctrl1.bit.susmod = 0;
+      regAdc_->ctrl1.bit.susmod = 0;
       // Power up the bandgap and reference circuitry inside the analog core
-      regAdc_->adctrl3.bit.adcbgrfdn = 0x3;
+      regAdc_->ctrl3.bit.adcbgrfdn = 3;
       // Power up the the analog circuitry inside the analog core
-      regAdc_->adctrl3.bit.adcpwdn  = 0x1; 
+      regAdc_->ctrl3.bit.adcpwdn  = 1; 
       sleep(5);
       // Set ADC Core    
-      regAdc_->adctrl3.bit.adcclkps = adp;
+      regAdc_->ctrl3.bit.adcclkps = adp;
       // Set ADC Core clock prescaler always is dividing to 1
-      regAdc_->adctrl1.bit.cps = 0;
+      regAdc_->ctrl1.bit.cps = 0;
       // Set SOC pulse width is 1 ADCLK periods
-      regAdc_->adctrl1.bit.acqPs = 0x0;
+      regAdc_->ctrl1.bit.acqPs = 0;
       System::dallow();
       lock_[index_] = true;    
       res = true;

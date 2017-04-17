@@ -25,14 +25,14 @@ public:
    * Constructor.
    */  
   AdcRegister() :
-    adctrl1    (),
-    adctrl2    (),
-    adcmaxconv (),
-    adcaseqsr  (),
-    adctrl3    (),
-    adcst      (),
-    adcrefsel  (),
-    adcofftrim (){
+    ctrl1   (),
+    ctrl2   (),
+    maxconv (),
+    aseqsr  (),
+    ctrl3   (),
+    st      (),
+    refsel  (),
+    offtrim (){
   }
   
   /** 
@@ -55,11 +55,11 @@ public:
   /**
    * ADC Control Register 1.
    */
-  union Adctrl1
+  union Ctrl1
   {
-    Adctrl1(){}
-    Adctrl1(uint16 v){val = v;}          
-   ~Adctrl1(){}    
+    Ctrl1(){}
+    Ctrl1(uint16 v){val = v;}          
+   ~Ctrl1(){}    
    
     uint16 val;
     struct Val
@@ -74,16 +74,16 @@ public:
       uint16 reset    : 1;
       uint16          : 1;
     } bit;
-  } adctrl1;  
+  } ctrl1;  
 
   /**
    * ADC Control Register 2.
    */
-  union Adctrl2
+  union Ctrl2
   {
-    Adctrl2(){}
-    Adctrl2(uint16 v){val = v;}          
-   ~Adctrl2(){}    
+    Ctrl2(){}
+    Ctrl2(uint16 v){val = v;}          
+   ~Ctrl2(){}    
    
     uint16 val;
     struct Val
@@ -105,16 +105,16 @@ public:
       uint16 rstSeq1      : 1;
       uint16 epwmSocbSeq  : 1;
     } bit;
-  } adctrl2;
+  } ctrl2;
 
   /**
    * ADC Maximum Conversion Channels Register.
    */
-  union Adcmaxconv
+  union Maxconv
   {
-    Adcmaxconv(){}
-    Adcmaxconv(uint16 v){val = v;}          
-   ~Adcmaxconv(){}    
+    Maxconv(){}
+    Maxconv(uint16 v){val = v;}          
+   ~Maxconv(){}    
    
     uint16 val;
     struct Val
@@ -124,16 +124,16 @@ public:
       uint16          : 9;
 
     } bit;
-  } adcmaxconv;
+  } maxconv;
 
   /**
    * ADC Channel Select Sequencing Control Register 1-4.
    */
-  union Adcchselseq
+  union Chselseq
   {
-    Adcchselseq(){}
-    Adcchselseq(uint16 v){val = v;}          
-   ~Adcchselseq(){}    
+    Chselseq(){}
+    Chselseq(uint16 v){val = v;}          
+   ~Chselseq(){}    
    
     uint16 val;
     struct Val
@@ -143,16 +143,16 @@ public:
       uint16 conv2 : 4;
       uint16 conv3 : 4; 
     } bit;
-  } adcchselseq[4];
+  } chselseq[4];
 
   /**
    * ADC Auto-Sequence Status Register.
    */
-  union Adcaseqsr
+  union Aseqsr
   {
-    Adcaseqsr(){}
-    Adcaseqsr(uint16 v){val = v;}          
-   ~Adcaseqsr(){}    
+    Aseqsr(){}
+    Aseqsr(uint16 v){val = v;}          
+   ~Aseqsr(){}    
    
     uint16 val;
     struct Val
@@ -163,16 +163,16 @@ public:
       uint16 seqCntr   : 4;
       uint16           : 4;
     } bit;
-  } adcaseqsr;
+  } aseqsr;
 
   /**
    * ADC Conversion Result Buffer Register 0-15.
    */
-  union Adcresult
+  union Result
   {
-    Adcresult(){}
-    Adcresult(uint16 v){val = v;}          
-   ~Adcresult(){}    
+    Result(){}
+    Result(uint16 v){val = v;}          
+   ~Result(){}    
    
     uint16 val;
     struct Val
@@ -191,16 +191,16 @@ public:
       uint16 d10 : 1;
       uint16 d11 : 1;
     } bit;
-  } adcresult[16];
+  } result[16];
 
   /**
    * ADC Control Register 3.
    */
-  union Adctrl3
+  union Ctrl3
   {
-    Adctrl3(){}
-    Adctrl3(uint16 v){val = v;}          
-   ~Adctrl3(){}    
+    Ctrl3(){}
+    Ctrl3(uint16 v){val = v;}          
+   ~Ctrl3(){}    
    
     uint16 val;
     struct Val
@@ -211,16 +211,16 @@ public:
       uint16 adcbgrfdn : 2;
       uint16           : 8;
     } bit;
-  } adctrl3;
+  } ctrl3;
 
   /**
    * ADC Status and Flag Register.
    */
-  union Adcst
+  union St
   {
-    Adcst(){}
-    Adcst(uint16 v){val = v;}          
-   ~Adcst(){}    
+    St(){}
+    St(uint16 v){val = v;}          
+   ~St(){}    
    
     uint16 val;
     struct Val
@@ -235,7 +235,7 @@ public:
       uint16 eosBuf2      : 1;
       uint16              : 8;
     } bit;
-  } adcst;
+  } st;
 
 
 private:        
@@ -247,11 +247,11 @@ public:
   /**
    * ADC Reference Select Register.
    */
-  union Adcrefsel
+  union Refsel
   {
-    Adcrefsel(){}
-    Adcrefsel(uint16 v){val = v;}          
-   ~Adcrefsel(){}    
+    Refsel(){}
+    Refsel(uint16 v){val = v;}          
+   ~Refsel(){}    
    
     uint16 val;
     struct Val
@@ -259,16 +259,16 @@ public:
       uint16        : 14;
       uint16 refSel : 2;
     } bit;
-  } adcrefsel;
+  } refsel;
 
   /**
    * ADC Offset Trim Register.
    */
-  union Adcofftrim
+  union Offtrim
   {
-    Adcofftrim(){}
-    Adcofftrim(uint16 v){val = v;}          
-   ~Adcofftrim(){}    
+    Offtrim(){}
+    Offtrim(uint16 v){val = v;}          
+   ~Offtrim(){}    
    
     uint16 val;
     struct Val
@@ -277,7 +277,7 @@ public:
       uint16            : 8;
 
     } bit;
-  } adcofftrim;
+  } offtrim;
 
 private:        
 
@@ -325,11 +325,11 @@ public:
   /**
    * ADC Conversion Result Buffer Register 0-15.
    */
-  union Adcresult
+  union Result
   {
-    Adcresult(){}
-    Adcresult(uint16 v){val = v;}          
-   ~Adcresult(){}    
+    Result(){}
+    Result(uint16 v){val = v;}          
+   ~Result(){}    
    
     uint16 val;
     struct Val
@@ -348,7 +348,7 @@ public:
       uint16 d10 : 1;
       uint16 d11 : 1;
     } bit;
-  } adcresult[16];
+  } result[16];
 
 };
 

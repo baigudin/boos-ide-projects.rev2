@@ -78,49 +78,42 @@ public:
     virtual int32 getChannelsNumber() const = 0;
     
     /**
+     * Returns a results number of sampling.
+     *
+     * @return the results number, or ERROR if error has been occurred.
+     */
+    virtual int32 getResultsNumber() const = 0;
+
+    /**
+     * Returns a results number of sampling.
+     *
+     * @return the results number, or ERROR if error has been occurred.
+     */
+    virtual int32 getConversionsNumber() const = 0;
+    
+    /**
      * Returns an array of sampling channel numbers.
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual int32* getChannels() = 0;
+    virtual const int32* getChannels() = 0;
     
     /**
      * Returns an array of sampling results.
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    virtual int32* getResults() = 0;
-    
+    virtual const int32* getResults() = 0;
     
   }; 
   
   /**
    * The ADC task.
    *
-   * @param CHANNELS a number of channels in sequence.
-   * @param PATHES     
+   * @param CHANNELS    a number of channels in sequence.
+   * @param CONVERSIONS a number of conversions of these channels.
    */
-  template <int32 CHANNELS>
-  struct TaskData
-  {
-    /**
-     * The list of sampling channels.
-     */    
-    int32 channel[CHANNELS]; 
-    
-    /**
-     * The result of sampled channels.
-     */    
-    int32 result[CHANNELS << 1];     
-
-  };  
-  
-  /**
-   * The ADC task.
-   *
-   * @param CHANNELS a number of channels in sequence.
-   */
-  template <int32 CHANNELS>  
+  template <int32 CHANNELS, int32 CONVERSIONS>  
   class Task : public TaskInterface
   {
   
@@ -128,9 +121,17 @@ public:
 
     /**
      * Constructor.
+     *
+     * @param channel an array of sampling channel numbers.
      */  
-    Task(TaskData<CHANNELS>& data) :
-      data_ (&data){
+    Task(int32* channel)
+    {
+      for(int32 i=0; i<CHANNELS_NUMBER; i++) 
+        channel_[i] = channel[i];
+      for(int32 b=0; b<BLOCKS_NUMBER; b++) 
+        for(int32 c=0; c<CONVERSIONS_NUMBER; c++)       
+          for(int32 r=0; r<RESULTS_NUMBER; r++) 
+            result_[b][c][r] = 0;
     }      
 
     /**
@@ -145,7 +146,27 @@ public:
      */
     virtual int32 getChannelsNumber() const
     {
-      return CHANNELS;    
+      return CHANNELS_NUMBER;    
+    }
+    
+    /**
+     * Returns a results number of sampling.
+     *
+     * @return the results number, or ERROR if error has been occurred.
+     */
+    virtual int32 getResultsNumber() const
+    {
+      return RESULTS_NUMBER;
+    }
+
+    /**
+     * Returns a results number of sampling.
+     *
+     * @return the results number, or ERROR if error has been occurred.
+     */
+    virtual int32 getConversionsNumber() const
+    {
+      return CONVERSIONS_NUMBER;
     }
     
     /**
@@ -153,27 +174,52 @@ public:
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual int32* getChannels()
+    virtual const int32* getChannels()
     {
-      return data_->channel;
-    }    
+      return channel_;
+    }
     
     /**
      * Returns an array of sampling results.
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    virtual int32* getResults()
+    virtual const int32* getResults()
     {
-      return data_->result;
+      return result_[0][0];
     }    
     
   private:
 
     /**
-     * The task.
+     * The number of channels in sequence.
      */    
-    TaskData<CHANNELS>* data_;
+    static const int32 CHANNELS_NUMBER = CHANNELS;
+    
+    /**
+     * The number of results in sequence.
+     */    
+    static const int32 RESULTS_NUMBER = CHANNELS << 1;
+
+    /**
+     * The number of conversions of the channels.
+     */    
+    static const int32 CONVERSIONS_NUMBER = CONVERSIONS;
+
+    /**
+     * The number of blocks of conversions of the resualts.
+     */    
+    static const int32 BLOCKS_NUMBER = 2;
+    
+    /**
+     * The list of sampling channels.
+     */    
+    int32 channel_[CHANNELS_NUMBER]; 
+    
+    /**
+     * The result of sampled channels.
+     */    
+    int32 result_[BLOCKS_NUMBER][CONVERSIONS_NUMBER][RESULTS_NUMBER];     
     
   };
   
@@ -194,11 +240,11 @@ public:
     virtual bool setTask(TaskInterface& task) = 0;
     
     /**
-     * Starts the sampling task of the ADC module.
+     * Triggers software start of conversion sequence.
      *
-     * @return true if the task has been set successfully.
+     * @return true if the trigger has been successful.
      */
-    virtual bool startTask() = 0;
+    virtual bool trigger() = 0;
     
     /**
      * Waits a sampling result.

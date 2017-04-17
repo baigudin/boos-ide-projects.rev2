@@ -73,6 +73,6 @@ SECTIONS
   .ebss      : > RAM,     PAGE = 1, fill = 0xffff
   .esysmem   : > RAM,     PAGE = 1, fill = 0xffff
   
-   /** ADC calibration section is IMPORTANT for ADC */
-   .adc_cal : load = ADC_CAL, PAGE = 0, TYPE = NOLOAD  
+  /** ADC calibration section is IMPORTANT for ADC */
+  .adc_cal : load = ADC_CAL, PAGE = 0, TYPE = NOLOAD  
 }
