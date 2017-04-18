@@ -126,17 +126,26 @@ private:
      */   
     SequenceController() : Parent(),
       task_            (NULL),
-      isTaskCompleted_ (false){
+      result000_       (NULL),
+      sequencesLeft_   (0),      
+      sequencesNumber_ (0),      
+      channelsNumber_  (0),
+      resultsNumber_   (0),
+      sampleNumber_    (0){      
       setConstruct( false );
     }
-    
   
     /**
      * Constructor.
      */   
     SequenceController(Mutexs& mutex) : Parent(mutex),
       task_            (NULL),
-      isTaskCompleted_ (false){
+      result000_       (NULL),      
+      sequencesLeft_   (0),      
+      sequencesNumber_ (0),      
+      channelsNumber_  (0),      
+      resultsNumber_   (0),
+      sampleNumber_    (0){
       setConstruct( construct() );
     }
     
@@ -156,7 +165,7 @@ private:
     virtual bool setTask(TaskInterface& task)
     {
       if( not isConstructed() ) return false;
-      if( not mutex_->res.lock() ) return false;     
+      if( not mutex_->res.lock() ) return false;
       bool res = false;
       do{
         if( not registerTask(task) ) break;
@@ -177,29 +186,11 @@ private:
       bool res = false;
       do{
         if( task_ == NULL ) break;
-        isTaskCompleted_ = false;
         // Start task
         regAdc_->ctrl2.bit.socSeq1 = 1;        
         res = true;
       }while(false);      
       return mutex_->res.unlock(res);        
-    }
-    
-    /**
-     * Waits a sampling result.
-     *
-     * @return true if the result has been sampled successfully.
-     */
-    virtual bool waitResult()
-    {
-      if( not isConstructed() ) return false;
-      if( not mutex_->res.lock() ) return false;     
-      while( not isTaskCompleted_ );
-      const int32 channels = task_->getChannelsNumber() << 1;
-      int32* results = const_cast<int32*>(task_->getResults());
-      for(int32 i=0; i<channels; i++)
-        results[i] = regAdcDma_->result[i].val;
-      return mutex_->res.unlock(true);        
     }
   
     /**
@@ -207,7 +198,21 @@ private:
      */  
     virtual void handler()
     {
-      isTaskCompleted_ = true;
+      do{
+        if(task_ == NULL) break;
+        if(sequencesLeft_ == 0) 
+        {
+          result000_ = task_->getFree();
+          if(result000_ == NULL) break;
+          sequencesLeft_ = sequencesNumber_;
+        }
+        register int32 index = (sequencesNumber_ - sequencesLeft_) * sampleNumber_;
+        register int32* result = &result000_[index];
+        for(int32 i=0; i<sampleNumber_; i++) 
+          result[i] = regAdcDma_->result[i].val;
+        if( --sequencesLeft_ == 0 )
+          task_->setFreeIsFull();
+      }while(false);
       // Reset sequencer to state CONV00
       regAdc_->ctrl2.bit.rstSeq1 = 1;
       // Clears the SEQ1 interrupt flag bit
@@ -236,10 +241,16 @@ private:
      */
     bool registerTask(TaskInterface& task)
     {
-      int32 number = task.getChannelsNumber();
-      if(number < 1 || number > CHANNELS_NUMBER) return false;
+      // Allow to set task only once
+      if(task_ != NULL ) return false;
+      sequencesNumber_ = task.getSequencesNumber();      
+      channelsNumber_ = task.getChannelsNumber();      
+      resultsNumber_ = task.getResultsNumber();
+      if(channelsNumber_ < 1 || 8 < channelsNumber_) return false;
+      if(resultsNumber_ != 2) return false; 
+      sampleNumber_ = channelsNumber_ * resultsNumber_;     
       const int32* channel = task.getChannels();
-      for(int32 i=0; i<number; i++)
+      for(int32 i=0; i<channelsNumber_; i++)
       {
         int32 chn = channel[i];
         if(0 <= chn && chn <= 7)
@@ -249,9 +260,9 @@ private:
         }
         return false;
       }
-      regAdc_->maxconv.bit.maxConv1 = number - 1;
-      task_ = &task;      
-      return true;    
+      regAdc_->maxconv.bit.maxConv1 = channelsNumber_ - 1;
+      task_ = &task;
+      return true;
     }
     
     /** 
@@ -288,22 +299,42 @@ private:
       regAdc_->ctrl2.bit.intModSeq1 = 0;
       return int_ == NULL ? false : true;
     }
-    
-    /**
-     * Number of ADC module channels.
-     */
-    static const int32 CHANNELS_NUMBER = 8;
 
     /**
      * The sampling task.
-     */    
+     */
     TaskInterface* task_;
 
     /**
-     * The task completed flag.
-     */        
-    volatile bool isTaskCompleted_;
-      
+     * The first result value of the conversion.
+     */
+    int32* result000_;
+    
+    /**
+     * The sequences number.
+     */
+    int32 sequencesLeft_;
+    
+    /**
+     * The sequences number.
+     */
+    int32 sequencesNumber_;
+    
+    /**
+     * The channels number for sampling.
+     */
+    int32 channelsNumber_;
+    
+    /**
+     * The results number of a channel.
+     */
+    int32 resultsNumber_;
+    
+    /**
+     * The samples number of a sampling.
+     */
+    int32 sampleNumber_;
+              
   };
   
   /**

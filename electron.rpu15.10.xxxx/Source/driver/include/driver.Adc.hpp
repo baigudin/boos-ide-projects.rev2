@@ -71,25 +71,25 @@ public:
     virtual ~TaskInterface(){}
     
     /**
-     * Returns a channels number for sampling.
+     * Returns the number of sequences of sampling channels.
      *
-     * @return the channels number, or ERROR if error has been occurred.
+     * @return the sequences number.
+     */
+    virtual int32 getSequencesNumber() const = 0;
+    
+    /**
+     * Returns the number of sampling channels.
+     *
+     * @return the channels number.
      */
     virtual int32 getChannelsNumber() const = 0;
     
     /**
-     * Returns a results number of sampling.
+     * Returns the number of results in a channel
      *
-     * @return the results number, or ERROR if error has been occurred.
+     * @return the results number.
      */
     virtual int32 getResultsNumber() const = 0;
-
-    /**
-     * Returns a results number of sampling.
-     *
-     * @return the results number, or ERROR if error has been occurred.
-     */
-    virtual int32 getConversionsNumber() const = 0;
     
     /**
      * Returns an array of sampling channel numbers.
@@ -97,23 +97,56 @@ public:
      * @return the channel numbers array, or NULL if error has been occurred.
      */
     virtual const int32* getChannels() = 0;
+
+    /**
+     * Returns a pointer to the first resualt of a free block.
+     *
+     * @return the free block first resualt, or NULL if no free has been.
+     */
+    virtual int32* getFree() = 0;
     
     /**
-     * Returns an array of sampling results.
+     * Returns a pointer to the first resualt of a full block.
      *
-     * @return the results array, or NULL if error has been occurred.
+     * @return the full block first resualt, or NULL if no full has been.
      */
-    virtual const int32* getResults() = 0;
+    virtual int32* getFull() = 0;
     
+    /**
+     * Sets first free block is full.
+     */
+    virtual void setFreeIsFull() = 0;
+    
+    /**
+     * Sets first full block is free.
+     */
+    virtual void setFullIsFree() = 0;
+    
+    /**
+     * Returns an index of the first free block.
+     *
+     * @return the first free block index, or -1 if no free has been.
+     */
+    virtual int32 getFreeIndex() const = 0;
+    
+    /**
+     * Returns an index of the first full block.
+     *
+     * @return the first full block index, or -1 if no full has been.
+     */
+    virtual int32 getFullIndex() const = 0;
+
   }; 
   
   /**
    * The ADC task.
    *
-   * @param CHANNELS    a number of channels in sequence.
-   * @param CONVERSIONS a number of conversions of these channels.
+   * @param BLOCKS    a number of blocks of internal circle buffer.
+   * @param SEQUENCES a number of sequences of sampling channels.
+   * @param CHANNELS  a number of sampling channels.
+   * @param RESULTS   a number of results in a channel.
    */
-  template <int32 CHANNELS, int32 CONVERSIONS>  
+  template <int32 BLOCKS, int32 SEQUENCES, int32 CHANNELS, int32 RESULTS>
   class Task : public TaskInterface
   {
   
@@ -124,50 +157,60 @@ public:
      *
      * @param channel an array of sampling channel numbers.
      */  
-    Task(int32* channel)
-    {
-      for(int32 i=0; i<CHANNELS_NUMBER; i++) 
+    Task(int32* channel) :
+      free_     (0),
+      full_     (0),
+      isFilled_ (false){
+      // Copy the channel array
+      for(int32 i=0; i<CHANNELS; i++) 
         channel_[i] = channel[i];
-      for(int32 b=0; b<BLOCKS_NUMBER; b++) 
-        for(int32 c=0; c<CONVERSIONS_NUMBER; c++)       
-          for(int32 r=0; r<RESULTS_NUMBER; r++) 
-            result_[b][c][r] = 0;
+      // Initialize default value of results
+      for(int32 b=0; b<BLOCKS; b++) 
+        for(int32 s=0; s<SEQUENCES; s++) 
+          for(int32 c=0; c<CHANNELS; c++)               
+            for(int32 r=0; r<RESULTS; r++) 
+              result_[b][s][c][r] = 0;
+      // Initialize illegal value of results
+      for(int32 s=0; s<SEQUENCES; s++) 
+        for(int32 c=0; c<CHANNELS; c++)               
+          for(int32 r=0; r<RESULTS; r++) 
+            illegal_[s][c][r] = -1;
     }      
 
     /**
      * Destructor.
      */  
     virtual ~Task(){}
+
+    /**
+     * Returns the number of sequences of sampling channels.
+     *
+     * @return the sequences number.
+     */
+    virtual int32 getSequencesNumber() const
+    {
+      return SEQUENCES;
+    }
     
     /**
-     * Returns a channels number for sampling.
+     * Returns the number of sampling channels.
      *
-     * @return the channels number, or ERROR if error has been occurred.
+     * @return the channels number.
      */
     virtual int32 getChannelsNumber() const
     {
-      return CHANNELS_NUMBER;    
+      return CHANNELS;    
     }
     
     /**
-     * Returns a results number of sampling.
+     * Returns the number of results in a channel
      *
-     * @return the results number, or ERROR if error has been occurred.
+     * @return the results number.
      */
     virtual int32 getResultsNumber() const
     {
-      return RESULTS_NUMBER;
-    }
-
-    /**
-     * Returns a results number of sampling.
-     *
-     * @return the results number, or ERROR if error has been occurred.
-     */
-    virtual int32 getConversionsNumber() const
-    {
-      return CONVERSIONS_NUMBER;
-    }
+      return RESULTS;
+    }    
     
     /**
      * Returns an array of sampling channel numbers.
@@ -178,48 +221,113 @@ public:
     {
       return channel_;
     }
+
+    /**
+     * Returns a pointer to the first resualt of a free block.
+     *
+     * @return the free block first resualt, or NULL if no free has been.
+     */
+    virtual int32* getFree()
+    {
+      return not isFilled_ ? &result_[free_][0][0][0] : NULL;
+    }
     
     /**
-     * Returns an array of sampling results.
+     * Returns a pointer to the first resualt of a full block.
+     *
+     * @return the full block first resualt, or NULL if no full has been.
+     */
+    virtual int32* getFull()
+    {
+      return isFilled_ || full_ != free_ ? &result_[full_][0][0][0] : NULL;
+    }
+    
+    /**
+     * Sets first free block is full.
+     */
+    virtual void setFreeIsFull()
+    {
+      if( isFilled_ ) return;
+      int32 free = free_ + 1;
+      if(free == BLOCKS) free = 0;
+      if(free == full_) isFilled_ = true;
+      free_ = free;
+    }
+    
+    /**
+     * Sets first full block is free.
+     */
+    virtual void setFullIsFree()
+    {
+      if( not isFilled_ && full_ == free_ ) return;
+      int32 full = full_ + 1;
+      if(full == BLOCKS) full = 0;
+      isFilled_ = false;
+      full_ = full;
+    }
+    
+    /**
+     * Returns an index of the first free block.
+     *
+     * @return the first free block index, or -1 if no free has been.
+     */
+    virtual int32 getFreeIndex() const
+    {
+      return not isFilled_ ? free_ : -1;
+      
+    }    
+    
+    /**
+     * Returns an index of the first full block.
+     *
+     * @return the first full block index, or -1 if no full has been.
+     */
+    virtual int32 getFullIndex() const
+    {
+      return isFilled_ || full_ != free_ ? full_ : -1;      
+    }
+    
+    /**
+     * Returns an array of sampled results.
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    virtual const int32* getResults()
+    const int32 (&operator[](int32 index))[SEQUENCES][CHANNELS][RESULTS]
     {
-      return result_[0][0];
+      return index < BLOCKS ? result_[index] : illegal_;
     }    
     
   private:
-
-    /**
-     * The number of channels in sequence.
-     */    
-    static const int32 CHANNELS_NUMBER = CHANNELS;
-    
-    /**
-     * The number of results in sequence.
-     */    
-    static const int32 RESULTS_NUMBER = CHANNELS << 1;
-
-    /**
-     * The number of conversions of the channels.
-     */    
-    static const int32 CONVERSIONS_NUMBER = CONVERSIONS;
-
-    /**
-     * The number of blocks of conversions of the resualts.
-     */    
-    static const int32 BLOCKS_NUMBER = 2;
-    
+  
     /**
      * The list of sampling channels.
      */    
-    int32 channel_[CHANNELS_NUMBER]; 
+    int32 channel_[CHANNELS]; 
     
     /**
      * The result of sampled channels.
      */    
-    int32 result_[BLOCKS_NUMBER][CONVERSIONS_NUMBER][RESULTS_NUMBER];     
+    int32 result_[BLOCKS][SEQUENCES][CHANNELS][RESULTS];
+    
+    /**
+     * The illegal result of sampled channels.
+     */    
+    int32 illegal_[SEQUENCES][CHANNELS][RESULTS];    
+    
+    /**
+     * First free block.
+     */    
+    int32 free_;
+    
+    /**
+     * First filled block.
+     */    
+    int32 full_;
+    
+    /**
+     * First filled block.
+     */    
+    bool isFilled_;    
     
   };
   
@@ -245,13 +353,6 @@ public:
      * @return true if the trigger has been successful.
      */
     virtual bool trigger() = 0;
-    
-    /**
-     * Waits a sampling result.
-     *
-     * @return true if the result has been sampled successfully.
-     */
-    virtual bool waitResult() = 0;
     
   };
   

@@ -14,11 +14,6 @@
 const int32 PWM_CHANNELS = 2;
 
 /**
- * The channels number of ADC.
- */
-const int32 ADC_CHANNELS = 2;
-
-/**
  * Starts new PWM task.
  *
  * @param pwm       a PWM module. 
@@ -43,21 +38,97 @@ static bool startPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1
  */   
 static void executeAdcTask(Adc& adc)
 {
-  // Set Ia || Ua and Ic || Uc conversions
+  int32 index;
+  // Set Ia || Ua and Ic || Uc
   int32 channel[2] = {Adc::A3B3, Adc::A2B2};
-  Adc::Task<ADC_CHANNELS, 3> task(channel);
+  // Create 5 elements circle bufer for sampling
+  // 2 simultaneous channels, which will be sampled 3 times
+  Adc::Task<5,3,2,2> task(channel);
   // Test the number of ADC sequences
   if(adc.getSequencesNumber() != 1) return;
   // Get the first ADC sequencer
   Adc::Sequence& seq = adc.getSequence(0);
   if( not seq.setTask(task) ) return;
-  volatile bool exec = true;  
-  while(exec == true)
+  // Create result buffer for 2 results of 2 channels
+  int32 result[2][2];
+  
+  /**
+   * The first way, but probably the fastest the ugliest, to get the result
+   */
+  // Software triggering ADC conversions for all 3 sequences
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  index = task.getFullIndex();
+  if(index == -1) return;
+  const int32 (&buf)[3][2][2] = task[index];
+  for(int32 s=0; s<3; s++)
   {
-    if( not seq.trigger() ) return;  
-    if( not seq.waitResult() ) return;
+    for(int32 c=0; c<2; c++)  
+    {
+      // Result A3 if 'c' equals 0
+      // Result A2 if 'c' equals 1      
+      result[c][0] = buf[s][c][0];
+      // Result B3 if 'c' equals 0
+      // Result B2 if 'c' equals 0      
+      result[c][1] = buf[s][c][1];
+      if(result[c][0] == -1 || result[c][1] == -1) return;            
+    }
   }
-  asm(" nop");
+  // Free processed task buffer
+  task.setFullIsFree();
+  
+  /**
+   * The second way to get the result
+   */
+  // Software triggering ADC conversions for all 3 sequences
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  index = task.getFullIndex();
+  if(index == -1) return;
+  for(int32 s=0; s<3; s++)
+  {
+    for(int32 c=0; c<2; c++)  
+    {
+      // Result A3 if 'c' equals 0
+      // Result A2 if 'c' equals 1      
+      result[c][0] = task[index][s][c][0];
+      // Result B3 if 'c' equals 0
+      // Result B2 if 'c' equals 0      
+      result[c][1] = task[index][s][c][1]; 
+      if(result[c][0] == -1 || result[c][1] == -1) return;           
+    }
+  }
+  // Free processed task buffer
+  task.setFullIsFree();
+  
+  /**
+   * The third way to get the result
+   */
+  // Software triggering ADC conversions for all 3 sequences
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
+  int32* addr = task.getFull();
+  if(addr == NULL) return;  
+  for(int32 s=0; s<3; s++)
+  {
+    for(int32 c=0; c<2; c++)  
+    {
+      // Result A3 if 'c' equals 0
+      // Result A2 if 'c' equals 1      
+      result[c][0] = *addr;
+      addr++;
+      // Result B3 if 'c' equals 0
+      // Result B2 if 'c' equals 0      
+      result[c][1] = *addr;      
+      addr++;
+      if(result[c][0] == -1 || result[c][1] == -1) return;
+    }
+  }
+  // Free processed task buffer
+  task.setFullIsFree();
 }
 
 /**
