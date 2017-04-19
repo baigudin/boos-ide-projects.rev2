@@ -12,7 +12,4 @@ Debug
 Release
 
 # Eclipse project files
-.cproject
-.project
-.settings/
 *.launch
