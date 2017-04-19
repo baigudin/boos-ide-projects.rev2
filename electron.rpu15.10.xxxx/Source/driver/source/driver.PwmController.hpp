@@ -19,7 +19,8 @@
 class PwmController : public ::Object, 
                       public ::Pwm, 
                       public ::Pwm::DeadBand, 
-                      public ::Pwm::Chopper
+                      public ::Pwm::Chopper,
+                      public ::Pwm::EventTrigger
 {
   typedef ::Object                    Parent;
   typedef ::PwmRegister::Tbctl::Val   Tbctl;
@@ -727,6 +728,106 @@ public:
   }
   
   /**
+   * Tests if the PWM module has chopper submodule.
+   *
+   * @return true if the module has chopper submodule.
+   */      
+  virtual bool isTriggered() const
+  {
+    return true;
+  }
+  
+  /**
+   * Returns a chopper submodule interface.
+   *
+   * @return reference to the chopper submodule interface.
+   */      
+  virtual ::Pwm::EventTrigger& getTrigger()
+  {
+    return *this;
+  }
+  
+  /**
+   * Sets triggering event.
+   *
+   * @param issue an trigger issuing source.
+   * @param event an trigger received event.
+   * @return true if the event has been set successfully.
+   */  
+  virtual bool setEvent(int32 issue, int32 event)
+  {
+    if(!isConstructed()) return false;
+    if(!mutex_.res.lock()) return false;
+    uint16 bit;
+    bool res = false;
+    switch(issue)
+    {
+      case Pwm::ADC_SOCA:
+      {
+        // Reset time-base events
+        regPwm_->etsel.bit.socaen = 0;    
+        regPwm_->etsel.bit.socasel = 0;
+        // Set time-base events        
+        bit = getEnableEvenBits(event);
+        if( bit == 0xffff ) break;
+        regPwm_->etsel.bit.socasel = bit;
+        // Set one the socasel event selected need to be occurred
+        regPwm_->etps.bit.socaprd = 1;
+        // Enable event
+        regPwm_->etsel.bit.socaen = 1;        
+        res = true;
+      }
+      break;
+      case Pwm::ADC_SOCB:
+      {
+        // Reset time-base events
+        regPwm_->etsel.bit.socben = 0;    
+        regPwm_->etsel.bit.socbsel = 0;
+        // Set time-base events        
+        bit = getEnableEvenBits(event);
+        if( bit == 0xffff ) break;
+        regPwm_->etsel.bit.socbsel = bit;
+        // Set one the socasel event selected need to be occurred
+        regPwm_->etps.bit.socbprd = 1;
+        // Enable event
+        regPwm_->etsel.bit.socben = 1;        
+        res = true;
+      }
+      break;      
+    }
+    return mutex_.drv.unlock(res);    
+  }
+  
+  /**
+   * Resets triggering event.
+   *
+   * @param issue an trigger issuing source.
+   */  
+  virtual void resetEvent(int32 issue)
+  {
+    if(!isConstructed()) return;
+    if(!mutex_.res.lock()) return;
+    switch(issue)
+    {
+      case Pwm::ADC_SOCA:
+      {
+        // Reset time-base events
+        regPwm_->etsel.bit.socaen = 0;    
+        regPwm_->etsel.bit.socasel = 0;
+      }
+      break;
+      case Pwm::ADC_SOCB:
+      {
+        // Reset time-base events
+        regPwm_->etsel.bit.socben = 0;    
+        regPwm_->etsel.bit.socbsel = 0;
+      }
+      break;      
+    }
+    return mutex_.drv.unlock();    
+  }
+  
+  /**
    * Initialization.
    *
    * @param sourceClock the CPU oscillator source clock in Hz.   
@@ -811,6 +912,14 @@ protected:
    */
   virtual int32 minFrequency() const = 0;
   
+  /**
+   * Sets received event.
+   *
+   * @param event an trigger received event.
+   * @return true if the event has been set successfully.
+   */  
+  virtual uint16 getEnableEvenBits(int32 event) = 0;
+
   /**
    * Tests task has correct values
    *

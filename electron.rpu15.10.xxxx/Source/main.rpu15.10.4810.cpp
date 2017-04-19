@@ -110,7 +110,7 @@ static void executeAdcTask(Adc& adc)
   if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
   if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
   if( not seq.trigger() ) return;      for(int32 i=0; i<0xfffff; i++);
-  int32* addr = task.getFull();
+  const int32* addr = task.getFull();
   if(addr == NULL) return;  
   for(int32 s=0; s<3; s++)
   {
@@ -136,7 +136,7 @@ static void executeAdcTask(Adc& adc)
  *
  * @return error code or zero.
  */   
-int mainBoard()
+int _main()
 {
   volatile bool exe = true;
   bool res = false;
@@ -163,11 +163,8 @@ int mainBoard()
   if(pwm != NULL && adc != NULL)
   {
     res = true;    
-    // Waiting some complete actions
-    while( exe )
-    {
-      executeAdcTask(*adc);
-    }
+    // Execute ADC sampling
+    executeAdcTask(*adc);
   }
   // Delete the ADC resource
   delete adc;  

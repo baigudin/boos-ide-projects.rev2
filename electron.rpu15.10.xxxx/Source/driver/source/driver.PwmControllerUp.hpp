@@ -183,7 +183,31 @@ protected:
   {
     if(!isConstructed()) return ERROR;        
     return tbclk_ / 0xffff + 1;
-  }  
+  }
+  
+  /**
+   * Sets received event.
+   *
+   * @param event an trigger received event.
+   * @return true if the event has been set successfully.
+   */  
+  virtual uint16 getEnableEvenBits(int32 event)
+  {
+    uint16 bit = 0xffff;
+    switch(event)
+    {
+      default: break;        
+      // Time-base counter equal to zero.
+      case CTR_ZERO: bit = 1; break;
+      // Time-base counter equal to period.
+      case CTR_PRD: bit = 2; break;
+      // Time-base counter equal to CMPA when the timer is incrementing.
+      case CTRU_CMPA: bit = 4; break;
+      // Time-base counter equal to CMPB when the timer is incrementing.
+      case CTRU_CMPB: bit = 6; break;
+    }
+    return bit;
+  }
 
 private:
 

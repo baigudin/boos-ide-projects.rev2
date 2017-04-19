@@ -39,6 +39,23 @@ public:
     SIMULTANEOUS_DUAL = 2
     
   };
+  
+  /**
+   *  Triggers as sources for the start of conversion sequence.
+   */
+  enum Trigger
+  {
+    /**
+     * PWM SOCA start.
+     */
+    PWM_SOCA = 0,
+    
+    /**
+     * PWM SOCB start.
+     */
+    PWM_SOCB = 1
+    
+  };
 
   /**
    * The TMS320F2833x ADC sequential channel numbers.
@@ -96,21 +113,21 @@ public:
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual const int32* getChannels() = 0;
+    virtual const int32* getChannels() const = 0;
 
     /**
      * Returns a pointer to the first resualt of a free block.
      *
      * @return the free block first resualt, or NULL if no free has been.
      */
-    virtual int32* getFree() = 0;
+    virtual const int32* getFree() const = 0;
     
     /**
      * Returns a pointer to the first resualt of a full block.
      *
      * @return the full block first resualt, or NULL if no full has been.
      */
-    virtual int32* getFull() = 0;
+    virtual const int32* getFull() const = 0;
     
     /**
      * Sets first free block is full.
@@ -217,7 +234,7 @@ public:
      *
      * @return the channel numbers array, or NULL if error has been occurred.
      */
-    virtual const int32* getChannels()
+    virtual const int32* getChannels() const
     {
       return channel_;
     }
@@ -227,7 +244,7 @@ public:
      *
      * @return the free block first resualt, or NULL if no free has been.
      */
-    virtual int32* getFree()
+    virtual const int32* getFree() const
     {
       return not isFilled_ ? &result_[free_][0][0][0] : NULL;
     }
@@ -237,7 +254,7 @@ public:
      *
      * @return the full block first resualt, or NULL if no full has been.
      */
-    virtual int32* getFull()
+    virtual const int32* getFull() const
     {
       return isFilled_ || full_ != free_ ? &result_[full_][0][0][0] : NULL;
     }
@@ -292,7 +309,7 @@ public:
      *
      * @return the results array, or NULL if error has been occurred.
      */
-    const int32 (&operator[](int32 index))[SEQUENCES][CHANNELS][RESULTS]
+    const int32 (&operator[](int32 index) const)[SEQUENCES][CHANNELS][RESULTS]
     {
       return index < BLOCKS ? result_[index] : illegal_;
     }    
@@ -348,12 +365,34 @@ public:
     virtual bool setTask(TaskInterface& task) = 0;
     
     /**
+     * Waits while sampling of task sequences will be completed.
+     *
+     * @return the index of completed task sequences block, or ERROR if error has been occurred.
+     */
+    virtual int32 wait() = 0;
+    
+    /**
      * Triggers software start of conversion sequence.
      *
      * @return true if the trigger has been successful.
      */
     virtual bool trigger() = 0;
     
+    /**
+     * Sets a trigger as source to start of conversion sequence.
+     *
+     * @param source a source for starting.
+     * @return true if the trigger has been successful.
+     */
+    virtual bool setTrigger(int32 source) = 0;
+    
+    /**
+     * Resets a trigger as source to start of conversion sequence.
+     *
+     * @param source a source for starting.
+     */
+    virtual void resetTrigger(int32 source) = 0;
+     
   };
   
   /**

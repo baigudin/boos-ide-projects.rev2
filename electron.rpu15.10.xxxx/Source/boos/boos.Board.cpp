@@ -8,7 +8,7 @@
  */
 #include "boos.Board.hpp"
 
-extern int mainBoard();
+extern int _main();
 
 /**
  * Initializes a processor board.
@@ -18,7 +18,7 @@ extern int mainBoard();
  */
 bool Board::init(const ::Configuration config)
 {
-  mainBoard();
+  _main();
   return false;
 }
 

@@ -6,6 +6,7 @@
 #include "driver.Pll.hpp" 
 #include "driver.Pwm.hpp"
 #include "driver.Adc.hpp"
+#include "driver.Interrupt.hpp"
 #include "driver.FullBridge.hpp"
 
 /**
@@ -14,9 +15,29 @@
 const int32 PWM_CHANNELS = 2;
 
 /**
- * The channels number of ADC.
+ * The number of blocks of internal circle buffer.
+ */
+const int32 ADC_BLOCKS = 2;
+
+/**
+ * The number of sequences of sampling channels.
+ */
+const int32 ADC_SEQUENCES = 4;
+
+/**
+ * The number of sampling channels.
  */
 const int32 ADC_CHANNELS = 1;
+
+/**
+ * The number of results in a channel.
+ */
+const int32 ADC_RESULTS = 2;
+
+/**
+ * The ADC task class.
+ */
+typedef Adc::Task<ADC_BLOCKS, ADC_SEQUENCES, ADC_CHANNELS, ADC_RESULTS> AdcTask;
 
 /**
  * Starts new PWM task.
@@ -29,37 +50,100 @@ const int32 ADC_CHANNELS = 1;
  */   
 static bool startPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1)
 {
-  Pwm::Task<PWM_CHANNELS> task = {frequency, duty0, duty1};
-  Pwm::TaskNode<PWM_CHANNELS> taskNode = task;
-  return pwm.start(taskNode);  
+  Pwm::TaskData<PWM_CHANNELS> data = {frequency, duty0, duty1};
+  Pwm::Task<PWM_CHANNELS> task = data;
+  return pwm.start(task);  
 }
 
 /**
- * Executes ADC task.
+ * Samples the singnal generating by PWM.
  *
- * @param adc       a ADC module. 
+ * @param adc a sampling ADC module.
+ * @param pwm a generating PWM module.
  * @return true if the task has been started successfully.
  */   
-static bool executeAdcTask(Adc& adc)
+static void sample(Adc& adc, Pwm& pwm)
 {
-  int32 result;
-  Adc::Task<ADC_CHANNELS> task = {3, {Adc::A0} };
-  Adc::TaskNode<ADC_CHANNELS> taskNode = task;
-  if( not adc.setTask(taskNode) ) return false;
-  if( not adc.startTask() ) return false;  
-  result = adc.resultTask(0, 0);
-  result = adc.resultTask(1, 0);  
-  result = adc.resultTask(2, 0);    
-  return result != Adc::ERROR ? true : false;  
+  int32 index, result, current, voltage;
+  // Set ADCA0 channel sampling
+  int32 channel[1] = {Adc::A0B0};
+  // Set PWM Event Trigger settings
+  if( not pwm.isTriggered() ) return;
+  ::Pwm::EventTrigger& et = pwm.getTrigger();
+  // Send SOCA to ADC to take current (I) 
+  if( not et.setEvent(Pwm::ADC_SOCA, Pwm::CTR_ZERO) ) return;
+  // Send SOCB to ADC to take voltage (V)   
+  if( not et.setEvent(Pwm::ADC_SOCB, Pwm::CTR_PRD) ) return;
+  // Create 2 elements circle bufer for sampling
+  // 1 simultaneous channels, which will be sampled 3 times
+  AdcTask task(channel);
+  // Test the number of ADC sequences
+  if(adc.getSequencesNumber() != 1) return;
+  // Get the first ADC sequencer
+  Adc::Sequence& seq = adc.getSequence(0);
+  if( not seq.setTask(task) ) return;
+  // PWM triggering ADC conversions for all 3 sequences
+  if( not seq.setTrigger(Adc::PWM_SOCA) ) return;
+  if( not seq.setTrigger(Adc::PWM_SOCB) ) return;
+  volatile bool exec = true;    
+  while(exec)
+  {
+    index = seq.wait();
+    if(index == -1) break;
+    for(int32 s=0; s<ADC_SEQUENCES; s++)
+    {
+      // Read the resual of corresponding sequence
+      switch (s & 0x1)
+      {
+        case 0:
+        {
+          current = result = task[index][s][0][0];        
+          if(current == -1) break;
+          // Do somethings with the current result
+          asm(" nop");          
+        }
+        break;
+        case 1:
+        {
+          voltage = result = task[index][s][0][0];        
+          if(voltage == -1) break;
+          // Do somethings with the voltage result
+          asm(" nop");          
+        }
+        break;
+      }
+      if(result != -1) continue;
+      exec = false;
+      break;
+    }
+    // Below this is ONLY A DEBUG HACK
+    int32* addr = const_cast<int32*>(task.getFull());
+    for(int32 s=0; s<ADC_SEQUENCES; s++)
+    {
+      for(int32 c=0; c<ADC_CHANNELS; c++)  
+      {
+        for(int32 r=0; r<ADC_RESULTS; r++)      
+        {
+          *addr = 0;
+          addr++;
+        }
+      }
+    }
+    // Below this is NOT the debug hack
+    // Free processed task buffer
+    task.setFullIsFree(); 
+  }
+  // Stop PWM triggering ADC conversions for all 3 sequences  
+  seq.resetTrigger(Adc::PWM_SOCA);
+  seq.resetTrigger(Adc::PWM_SOCB);  
 }
-
 
 /**
  * User program entry.
  *
  * @return error code or zero.
  */   
-int main()
+int _main()
 {
   volatile bool exe = true;
   bool res = false;
@@ -71,17 +155,21 @@ int main()
   const int32 sysclk = 150000000;  
   // Initialize the PLL driver
   if( not Pll::init(oscclk, sysclk) ) return -1;
+  // Initialize the Interrupt driver
+  if( not Interrupt::init(oscclk, sysclk) ) return -1;  
   // Initialize the PWM driver
   if( not Pwm::init(oscclk) ) return -1;
+  // Initialize the DRV8432 Dual Full-Bridge driver
+  if( not FullBridge::init() ) return -1;  
   // Initialize the ADC driver
   if( not Adc::init(oscclk) ) return -1;  
-  // Initialize the DRV8432 Dual Full-Bridge driver
-  if( not FullBridge::init() ) return -1;
+  // Enable global interrupts
+  Interrupt::globalEnable();
   // Create a PWM resources
-  pwm[0] = Pwm::create(sysclk, 1, Pwm::UP);
+  pwm[0] = Pwm::create(sysclk, 1, Pwm::UPDOWN);
   pwm[1] = Pwm::create(sysclk, 2, Pwm::UP);
   // Create ACD ADCINA0 channel resource and desire setting ADCCLK 25 MHz
-  adc = Adc::create(25000000, Adc::DUAL);
+  adc = Adc::create(25000000, Adc::SIMULTANEOUS_CASCADED);
   if(pwm[0] != NULL && pwm[1] != NULL && adc != NULL)
   {
     res = true;    
@@ -96,6 +184,7 @@ int main()
     res &= pwm[0]->isDeadBanded();    
     res &= pwm[1]->isDeadBanded();
     // Start new task for PWM 1 (A and B channels) at 42 KHz
+    res &= startPwmTask(*pwm[0], 42000, 10.0f, 10.0f);    
     res &= startPwmTask(*pwm[0], 42000, 50.0f, 50.0f);    
     // Start new task for PWM 2 (C channel) at 200 KHz in HR mode
     pwm[1]->enableHighResolution();          
@@ -118,11 +207,8 @@ int main()
       db[1]->getOutput(0).disable();   
       // Synchronize the PWM 1 with the PWM 2
       pwm[0]->synchronize();      
-      // Waiting some complete actions
-      while( exe )
-      {
-        executeAdcTask(*adc);
-      }
+      // Execute ADC sampling
+      sample(*adc, *pwm[0]);
     }
     // Stop generating the PWM wave if it is being generated
     pwm[0]->stop();

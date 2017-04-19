@@ -41,40 +41,6 @@ public:
   {
     return Adc::SEQUENTIAL;  
   }
-  
-  /**
-   * Starts the sampling task of the ADC module.
-   *
-   * @return true if the task has been started successfully.
-   */
-  virtual bool startTask()
-  {
-    return false;
-  }  
-  
-protected:
-
-  /**
-   * Registers a task.
-   *
-   * @param task a task.
-   * @return true if the task has been registered.
-   */
-  virtual bool regTask(const TaskNodeInterface& task)
-  {
-    return false;
-  }  
-
-  /**
-   * Tests task has correct values
-   *
-   * @param task a task.
-   * @return true if the task is correct.
-   */
-  virtual bool isTask(const TaskNodeInterface& task) const
-  {
-    return false;
-  }
 
 private:  
 

@@ -50,9 +50,9 @@ SECTIONS
                  "./Debug/driver.Interrupt.obj"   (.text)
                  "./Debug/driver.Pll.obj"         (.text)
                  "./Debug/driver.Pwm.obj"         (.text)
-                 "./Debug/driver.System.ll.obj"   (.text)
-                 "./Debug/main.rpu15.10.4810.obj" (.text)
-                 "./Debug/boos.Board.obj"         (.text)
+                 "./Debug/driver.System.ll.obj"   (.text)               
+                 "./Debug/main.rpu15.10.3530.obj" (.text)
+               /*"./Debug/main.rpu15.10.4810.obj" (.text)*/
                /*"../../boos-core.rev3/libraries/boos.ti.tms320f2833x.coff.debug.lib" <boos.driver.Interrupt.obj>    (.text)*/
                /*"../../boos-core.rev3/libraries/boos.ti.tms320f2833x.coff.debug.lib" <boos.driver.Interrupt.ll.obj> (.text)*/
                } 

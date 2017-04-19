@@ -68,6 +68,65 @@ public:
   };
   
   /**
+   * The PWM trigger issue.
+   */  
+  enum TriggerIssue
+  {
+    /**
+     * The PWM SOCA signal generates an event to ADC.
+     */
+    ADC_SOCA = 0,
+      
+    /**
+     * The PWM SOCB signal generates an event to ADC.
+     */
+    ADC_SOCB = 1,
+    
+    /**
+     * The PWM generates an interrupt to CPU.
+     */
+    CPU_INT = 2
+
+  };  
+  
+  /**
+   * The PWM trigger events.
+   */  
+  enum TriggerEvent
+  {
+    /**
+     * Time-base counter equal to zero.
+     */
+    CTR_ZERO = 1,
+    
+    /**
+     * Time-base counter equal to period.
+     */
+    CTR_PRD = 2,
+    
+    /**
+     * Time-base counter equal to CMPA when the timer is incrementing.
+     */
+    CTRU_CMPA = 4,
+    
+    /**
+     * Time-base counter equal to CMPA when the timer is decrementing.
+     */
+    CTRD_CMPA = 5,
+    
+    /**
+     * Time-base counter equal to CMPB when the timer is incrementing.
+     */   
+    CTRU_CMPB = 6,
+    
+    /**
+     * Time-base counter equal to CMPB when the timer is decrementing.
+     */
+    CTRD_CMPB = 7
+
+  };
+  
+  /**
    * The PWM task interface.
    */  
   class TaskInterface
@@ -456,6 +515,37 @@ public:
     virtual ::Pwm::Toggle& getChopping() = 0;
     
   };
+  
+  /**
+   * The PWM Event-Trigger Submodule.
+   */  
+  class EventTrigger
+  {
+  
+  public:
+  
+    /**
+     * Destructor.
+     */  
+    virtual ~EventTrigger(){}
+    
+    /**
+     * Sets triggering event.
+     *
+     * @param issue an trigger issuing source.
+     * @param event an trigger received event.
+     * @return true if the event has been set successfully.
+     */  
+    virtual bool setEvent(int32 issue, int32 event) = 0;
+    
+    /**
+     * Resets triggering event.
+     *
+     * @param issue an trigger issuing source.
+     */  
+    virtual void resetEvent(int32 issue) = 0;
+
+  };
 
   /** 
    * Destructor.
@@ -649,6 +739,20 @@ public:
    * @return reference to the chopper submodule interface.
    */      
   virtual ::Pwm::Chopper& getChopper() = 0;  
+  
+  /**
+   * Tests if the PWM module has chopper submodule.
+   *
+   * @return true if the module has chopper submodule.
+   */      
+  virtual bool isTriggered() const = 0;
+  
+  /**
+   * Returns a chopper submodule interface.
+   *
+   * @return reference to the chopper submodule interface.
+   */      
+  virtual ::Pwm::EventTrigger& getTrigger() = 0;
   
   /**
    * Returns the driver resource interface.

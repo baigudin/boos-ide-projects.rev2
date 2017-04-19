@@ -175,6 +175,65 @@ private:
     }
     
     /**
+     * Waits while sampling of task sequences will be completed.
+     *
+     * @return the index of completed task sequences block, or ERROR if error has been occurred.
+     */
+    virtual int32 wait()
+    {
+      if( not isConstructed() ) return ERROR;
+      if( not mutex_->res.lock() ) return ERROR;
+      int32 index = ERROR;
+      do{
+        if( task_ == NULL ) break;
+        // The best way is using BOOS Semaphore here.
+        // So, I expect we will use the BOOS operating system soon :)
+        do{
+          index = task_->getFullIndex();
+        }while(index == ERROR);
+      }while(false);      
+      return mutex_->res.unlock(index);            
+    }
+
+    /**
+     * Sets a trigger as source to start of conversion sequence.
+     *
+     * @param source a source for starting.
+     * @return true if the trigger has been successful.
+     */
+    virtual bool setTrigger(int32 source)
+    {
+      if( not isConstructed() ) return false;
+      if( not mutex_->res.lock() ) return false;
+      bool res = true;
+      switch(source)
+      {
+        case Adc::PWM_SOCA: regAdc_->ctrl2.bit.epwmSocaSeq1 = 1; break;
+        case Adc::PWM_SOCB: regAdc_->ctrl2.bit.epwmSocbSeq = 1; break;
+        default: res = false; break;
+      }
+      return mutex_->res.unlock(res);            
+    }
+    
+    /**
+     * Resets a trigger as source to start of conversion sequence.
+     *
+     * @param source a source for starting.
+     */
+    virtual void resetTrigger(int32 source)
+    {
+      if( not isConstructed() ) return;
+      if( not mutex_->res.lock() ) return;
+      switch(source)
+      {
+        case Adc::PWM_SOCA: regAdc_->ctrl2.bit.epwmSocaSeq1 = 0; break;
+        case Adc::PWM_SOCB: regAdc_->ctrl2.bit.epwmSocbSeq = 0; break;
+        default: break;
+      }
+      return mutex_->res.unlock();    
+    }
+    
+    /**
      * Triggers software start of conversion sequence.
      *
      * @return true if the trigger has been successful.
@@ -207,7 +266,7 @@ private:
           sequencesLeft_ = sequencesNumber_;
         }
         register int32 index = (sequencesNumber_ - sequencesLeft_) * sampleNumber_;
-        register int32* result = &result000_[index];
+        register int32* result = const_cast<int32*>(&result000_[index]);
         for(int32 i=0; i<sampleNumber_; i++) 
           result[i] = regAdcDma_->result[i].val;
         if( --sequencesLeft_ == 0 )
@@ -308,7 +367,7 @@ private:
     /**
      * The first result value of the conversion.
      */
-    int32* result000_;
+    const int32* result000_;
     
     /**
      * The sequences number.
