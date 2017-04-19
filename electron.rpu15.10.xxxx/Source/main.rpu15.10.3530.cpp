@@ -93,17 +93,17 @@ static void sample(Adc& adc, Pwm& pwm)
     for(int32 s=0; s<ADC_SEQUENCES; s++)
     {
       // Read the resual of corresponding sequence
-      // 
-      // NOTE: The PWM has been already started and SOCA and SOCB have been triggering ADC.  
+      //
+      // NOTE: The PWM has been started and SOCA and SOCB have been triggering ADC.  
       // SOCA is the current trigger, SOCB is the voltage trigger. 
-      // Which trigger triggers ADC is not obvious. If the first had been SOCA, 
-      // the zero case must have been the current result; otherwise 
-      // the zero case might have been the voltage result.
+      // Which trigger at the first pass triggers ADC is not obvious. 
+      // If the first trigger had been SOCA, the zero case would be the current result; 
+      // otherwise it would be the voltage result.
       switch (s & 0x1)
       {
         case 0:
         {
-          current = result = task[index][s][0][0];        
+          current = result = task[index][s][0][0];
           if(current == -1) break;
           // Do somethings with the current result
           asm(" nop");          
