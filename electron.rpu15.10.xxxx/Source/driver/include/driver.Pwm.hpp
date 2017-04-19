@@ -553,15 +553,22 @@ public:
   virtual ~Pwm(){}
   
   /**
-   * Starts generating the tasking wave of the PWM module.
+   * Sets a task for generating wave of the PWM module.
    *
    * Note: The method has to copy the passed task into internal structure data.
    * Thus, when the method has been called, the passing task object might be deleted.
    *
    * @param task a new task for generating.
+   * @return true if the task has been set successfully.
+   */
+  virtual bool setTask(const TaskInterface& task) = 0;
+  
+  /**
+   * Starts generating the tasked wave of the PWM module.
+   *
    * @return true if the task has been started successfully.
    */
-  virtual bool start(const TaskInterface& task) = 0;
+  virtual bool start() = 0;  
   
   /**
    * Stops generating the wave of the PWM module.

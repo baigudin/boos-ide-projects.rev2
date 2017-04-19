@@ -26,7 +26,7 @@ Source="Source\driver\source\driver.Pwm.cpp"
 Source="Source\driver\source\driver.System.ll.asm"
 Source="Source\libraries\rts2800_fpu32.lib"
 Source="Source\libraries\SFO_TI_Build_V5B_fpu.lib"
-Source="Source\main.rpu15.10.4810.cpp"
+Source="Source\main.rpu15.10.3530.cpp"
 Source="Source\cmd\memory.rpu15.10.cmd"
 
 ["Compiler" Settings: "Debug"]

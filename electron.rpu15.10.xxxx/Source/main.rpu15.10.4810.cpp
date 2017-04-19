@@ -27,7 +27,8 @@ static bool startPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1
   (void) startPwmTask;
   Pwm::TaskData<PWM_CHANNELS> data = {frequency, duty0, duty1};
   Pwm::Task<PWM_CHANNELS> task = data;
-  return pwm.start(task);  
+  if( not pwm.setTask(task) ) return false;  
+  return pwm.start();
 }
 
 /**

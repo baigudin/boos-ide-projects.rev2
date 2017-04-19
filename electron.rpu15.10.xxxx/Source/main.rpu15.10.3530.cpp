@@ -48,11 +48,11 @@ typedef Adc::Task<ADC_BLOCKS, ADC_SEQUENCES, ADC_CHANNELS, ADC_RESULTS> AdcTask;
  * @param duty1     second channel duty in percentages.
  * @return true if the task has been started successfully.
  */   
-static bool startPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1)
+static bool setPwmTask(Pwm& pwm, int32 frequency, float32 duty0, float32 duty1)
 {
   Pwm::TaskData<PWM_CHANNELS> data = {frequency, duty0, duty1};
   Pwm::Task<PWM_CHANNELS> task = data;
-  return pwm.start(task);  
+  return pwm.setTask(task);  
 }
 
 /**
@@ -85,7 +85,7 @@ static void sample(Adc& adc, Pwm& pwm)
   // PWM triggering ADC conversions for all 3 sequences
   if( not seq.setTrigger(Adc::PWM_SOCA) ) return;
   if( not seq.setTrigger(Adc::PWM_SOCB) ) return;
-  volatile bool exec = true;    
+  volatile bool exec = true;
   while(exec)
   {
     index = seq.wait();
@@ -93,6 +93,12 @@ static void sample(Adc& adc, Pwm& pwm)
     for(int32 s=0; s<ADC_SEQUENCES; s++)
     {
       // Read the resual of corresponding sequence
+      // 
+      // NOTE: The PWM has been already started and SOCA and SOCB have been triggering ADC.  
+      // SOCA is the current trigger, SOCB is the voltage trigger. 
+      // Which trigger triggers ADC is not obvious. If the first had been SOCA, 
+      // the zero case must have been the current result; otherwise 
+      // the zero case might have been the voltage result.
       switch (s & 0x1)
       {
         case 0:
@@ -183,12 +189,13 @@ int _main()
     res &= pwm[0]->isSynchronizing();
     res &= pwm[0]->isDeadBanded();    
     res &= pwm[1]->isDeadBanded();
-    // Start new task for PWM 1 (A and B channels) at 42 KHz
-    res &= startPwmTask(*pwm[0], 42000, 10.0f, 10.0f);    
-    res &= startPwmTask(*pwm[0], 42000, 50.0f, 50.0f);    
-    // Start new task for PWM 2 (C channel) at 200 KHz in HR mode
+    // Set new task for PWM 1 (A and B channels) at 42 KHz
+    res &= setPwmTask(*pwm[0], 42000, 50.0f, 50.0f);    
+    // Set new task for PWM 2 (C channel) at 200 KHz in HR mode
     pwm[1]->enableHighResolution();          
-    res &= startPwmTask(*pwm[1], 200000, 50.0f, 0.0f);
+    res &= setPwmTask(*pwm[1], 200000, 50.0f, 0.0f);
+    res &= pwm[0]->start();
+    res &= pwm[1]->start();
     if(res)
     {
       Pwm::DeadBand* db[2];

@@ -39,6 +39,42 @@ public:
   }
   
   /**
+   * Starts generating the tasked wave of the PWM module.
+   *
+   * @return true if the task has been started successfully.
+   */
+  virtual bool start()
+  {
+    if(!isConstructed()) return false;
+    if(!mutex_.res.lock()) return false;    
+    if(!isTask(task_)) return mutex_.res.unlock( false );
+    uint16 prd, cmp[CHANNELS_NUMBER];
+    // Set timer period
+    int32 pwmclk = task_.getFrequency();
+    // Rounding up real count of timer-base clocks which wishes to be loaded
+    uint32 count = tbclk_ / pwmclk + (tbclk_ % pwmclk != 0 ? 1 : 0);
+    // Real count of timer-base clocks which will be loaded
+    prd = (count - 1) & 0x0000ffff;
+    for(int32 i=0; i<CHANNELS_NUMBER; i++)
+    {
+      float32 duty = task_.getDuty(i);
+      if(duty == ERROR) duty = 0.0f;
+      float32 value = static_cast<float32>(count) * duty / 100.0f - 1.0f;    
+      cmp[i] = static_cast<uint32>(value) & 0x0000ffff;
+    }
+    // Write values to the registers in iterrupts disable mode
+    // for possibility to call the method in an interrupt handler
+    bool is = disable();
+    regPwm_->tbprd.val = prd;
+    for(int32 i=0; i<CHANNELS_NUMBER; i++) regPwm_->cmp[i].val = cmp[i];    
+    enable(is);
+    #ifdef DRIVER_HRPWM
+    startHighResolution();
+    #endif // DRIVER_HRPWM        
+    return mutex_.res.unlock( true );
+  }
+  
+  /**
    * Returns the PWM signal frequency of currently assigned task.
    *
    * @param set flag allows getting the set or calculated value.
@@ -128,40 +164,6 @@ public:
   #endif // DRIVER_HRPWM          
   
 protected:
-
-  /**
-   * Starts generating the wave of the PWM module.
-   *
-   * @return true if the PWM has been started successfully.
-   */
-  virtual bool startTask()
-  {
-    uint16 prd, cmp[CHANNELS_NUMBER];
-    // Set timer period
-    int32 pwmclk = task_.getFrequency();
-    if(pwmclk == ERROR) return false;
-    // Rounding up real count of timer-base clocks which wishes to be loaded
-    uint32 count = tbclk_ / pwmclk + (tbclk_ % pwmclk != 0 ? 1 : 0);
-    // Real count of timer-base clocks which will be loaded
-    prd = (count - 1) & 0x0000ffff;
-    for(int32 i=0; i<CHANNELS_NUMBER; i++)
-    {
-      float32 duty = task_.getDuty(i);
-      if(duty == ERROR) duty = 0.0f;
-      float32 value = static_cast<float32>(count) * duty / 100.0f - 1.0f;    
-      cmp[i] = static_cast<uint32>(value) & 0x0000ffff;
-    }
-    // Write values to the registers in iterrupts disable mode
-    // for possibility to call the method in an interrupt handler
-    bool is = disable();
-    regPwm_->tbprd.val = prd;
-    for(int32 i=0; i<CHANNELS_NUMBER; i++) regPwm_->cmp[i].val = cmp[i];    
-    enable(is);
-    #ifdef DRIVER_HRPWM
-    startTaskHR();
-    #endif // DRIVER_HRPWM        
-    return true;
-  }
   
   /**
    * Returns max available frequency of the PWM module.

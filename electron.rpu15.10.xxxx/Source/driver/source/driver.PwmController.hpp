@@ -69,20 +69,20 @@ public:
     index_ = ERROR;
     mutex_.drv.unlock();
   }
-  
+
   /**
-   * Starts generating the tasking wave of the PWM module.
+   * Sets a task for generating wave of the PWM module.
    *
    * @param task a new task for generating.
-   * @return true if the task has been started successfully.
+   * @return true if the task has been set successfully.
    */
-  virtual bool start(const TaskInterface& task)
+  virtual bool setTask(const TaskInterface& task)
   {
     if(!isConstructed()) return false;
     if(!mutex_.res.lock()) return false;    
     if(!isTask(task)) return mutex_.res.unlock( false );
     task_ = task;
-    return mutex_.res.unlock( startTask() );
+    return mutex_.res.unlock( true );
   }
   
   /**
@@ -892,13 +892,6 @@ public:
 protected:  
 
   /**
-   * Starts generating the wave of the PWM module.
-   *
-   * @return true if the PWM has been started successfully.
-   */
-  virtual bool startTask() = 0;
-
-  /**
    * Returns max available frequency of the PWM module.
    *
    * @return max frequency, or ERROR if error occurred.   
@@ -963,11 +956,9 @@ protected:
   #ifdef DRIVER_HRPWM
   
   /**
-   * Starts generating the wave of the PWM module.
-   *
-   * @return true if the PWM has been started successfully.
+   * Starts generating the tasked wave of the PWM module in high resolution.
    */
-  virtual void startTaskHR()
+  virtual void startHighResolution()
   {
     if(not isHiRes_) return;
     uint16 cmphr;
