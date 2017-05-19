@@ -9,6 +9,7 @@
 #include "boos.driver.timer.h"
 #include "boos.system.thread.h"
 #include "registers.h"
+#include "mdio.h"
 
 /**
  * Green led port.
@@ -31,26 +32,19 @@ sbit RSTM = REG_P1^2;
 sbit RSTK = REG_P1^3;
 
 /**
- * MDIO input/output data port 
- */
-sbit MDIO = REG_P1^4;
-
-/**
- * MDIO interface synchronization port 
- */
-sbit MDC = REG_P1^5;
-
-/**
  * User program entry.
  *
  * @return error code or zero.
  */
 int8 userMain()
 {
+  volatile uint16 reg;
+  
   /* Set default states of P0 and P1 ports */
   REG_P0 = 0x87;
   REG_P1 = 0x5f;
-  /* From P1.0 till P1.3 and P1.5 output are push-pull */
+  /* From P1.0 till P1.3 and P1.5 output are push-pull,
+     and P1.4 is open-drain */
   REG_P1MDOUT = 0x2F;
   /* From P0.0 till P0.7 and P1.0 till P1.6 are
      skipped by the Crossbar and used for GPIO */
@@ -81,6 +75,7 @@ int8 userMain()
   threadSleep(50);
   /* Complite setuping of MAX24287 */  
   RSTM = 0;
+   
   
   GLED = 1;
   GLED = 0;  
@@ -88,5 +83,19 @@ int8 userMain()
   YLED = 1;  
   YLED = 0;    
   
+  reg = 0xffff;
+  reg = mdioRead(4, 1);
+  
+  reg = 0xffff;  
+  reg = mdioRead(4, 1);  
+  
+  reg = 0xffff;  
+  reg = mdioRead(4, 1);    
+  
+  reg = mdioRead(4, 31);
+  mdioWrite(4, 31, 3);  
+  reg = mdioRead(4, 31);  
+  mdioWrite(4, 31, 1);    
+  reg = mdioRead(4, 31);    
   return 0;  
 }

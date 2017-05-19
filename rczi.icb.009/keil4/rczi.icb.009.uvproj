@@ -400,6 +400,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.thread.c</FilePath>
             </File>
+            <File>
+              <FileName>mdio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\mdio.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
