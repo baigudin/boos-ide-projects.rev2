@@ -4,13 +4,13 @@
  * @author    Sergey Baigudin, sergey@baigudin.software
  * @link      http://baigudin.software
  */
-#ifndef MDIO_H_
-#define MDIO_H_
+#ifndef DRIVER_MDIO_H_
+#define DRIVER_MDIO_H_
 
-#include "boos.types.h"
+#include "boos.constants.h"
 
 /**
- * Returns an timer resource.
+ * Read from a PHY device.
  *
  * @param phyAddr an device address. 
  * @param regAddr an register address.
@@ -27,4 +27,11 @@ extern int16 mdioRead(int8 phyAddr, int8 regAddr);
  */
 extern void mdioWrite(int8 phyAddr, int8 regAddr, int16 value);
 
-#endif /* MDIO_H_ */
+/**
+ * Initializes the driver.
+ *
+ * @return error code or else zero if no errors have been occurred.
+ */   
+extern int8 mdioInit(void);
+
+#endif /* DRIVER_MDIO_H_ */

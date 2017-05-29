@@ -401,9 +401,14 @@
               <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.thread.c</FilePath>
             </File>
             <File>
-              <FileName>mdio.c</FileName>
+              <FileName>driver.max.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\source\mdio.c</FilePath>
+              <FilePath>..\source\driver.max.c</FilePath>
+            </File>
+            <File>
+              <FileName>driver.mdio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\driver.mdio.c</FilePath>
             </File>
           </Files>
         </Group>
