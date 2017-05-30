@@ -7,6 +7,7 @@
 #include "driver.max.h"
 #include "driver.mdio.h"
 #include "driver.registers.h"
+#include "boos.system.thread.h"
 
 /**
  * The device reset port mask.
@@ -32,6 +33,11 @@ sbit reset_ = REG_P1^2;
  * Current page of the device registers.
  */
 static int8 page_;
+
+/**
+ * The driver has been initialized successfully.
+ */
+static int8 isInitialized_;
 
 /**
  * Read from the device.
@@ -78,15 +84,16 @@ int8 maxInit(void)
 {
   int16 val;  
   int8 error = BOOS_OK;  
-  /* Set the device is being reseted */
-  reset_ = 1;
+  isInitialized_ = 0;    
   /* Set the reset port is push-pull */
   REG_P1MDOUT |= RESET_PORT_MASK;
   /* Set reset port is skipped by the Crossbar and used for GPIO */
   REG_P1SKIP |= RESET_PORT_MASK;
   /* Enable Crossbar for using port pins as digital outputs */
   REG_XBR2 |= 0x40;
-  /* Set the device is not reseted */
+  /* Reset the device */
+  reset_ = 1;
+  threadSleep(10);
   reset_ = 0; 
   /* Read-write test */
   for(val=3; val>=0; val--)
@@ -110,5 +117,9 @@ int8 maxInit(void)
       error = BOOS_ERROR;
     }  
   }
+  if(error == BOOS_OK)
+  {
+    isInitialized_ = 1;  
+  }  
   return error;
 }

@@ -28,6 +28,11 @@ sbit mdio_ = REG_P1^4;
 sbit mdc_ = REG_P1^5;
 
 /**
+ * The driver has been initialized successfully.
+ */
+static int8 isInitialized_;
+
+/**
  * Delays the bus.
  *
  * The function delays Management Data Clock (MDC), 
@@ -95,14 +100,21 @@ static uint16 input(void)
  */
 int16 mdioRead(int8 phyAddr, int8 regAddr)
 {
-  int16 val;
-  output(0xffffffff, 32);
-  output(0x6, 4);
-  output(phyAddr, 5);
-  output(regAddr, 5);
-  output(1, 1);  
-  val = input();
-  output(1, 1);
+  int16 val;  
+  if(isInitialized_)
+  {   
+    output(0xffffffff, 32);
+    output(0x6, 4);
+    output(phyAddr, 5);
+    output(regAddr, 5);
+    output(1, 1);  
+    val = input();
+    output(1, 1);
+  }
+  else
+  {
+    val = -1;
+  }
   return val;  
 }
 
@@ -115,13 +127,16 @@ int16 mdioRead(int8 phyAddr, int8 regAddr)
  */
 void mdioWrite(int8 phyAddr, int8 regAddr, int16 value)
 {
-  output(0xffffffff, 32);
-  output(0x5, 4);
-  output(phyAddr, 5);
-  output(regAddr, 5);
-  output(0x2, 2);
-  output(value, 16);
-  output(1, 1);
+  if(isInitialized_)
+  {  
+    output(0xffffffff, 32);
+    output(0x5, 4);
+    output(phyAddr, 5);
+    output(regAddr, 5);
+    output(0x2, 2);
+    output(value, 16);
+    output(1, 1);
+  }
 }
 
 /**
@@ -131,6 +146,7 @@ void mdioWrite(int8 phyAddr, int8 regAddr, int16 value)
  */   
 int8 mdioInit(void)  
 {
+  isInitialized_ = 0;  
   /* Set default values of data and clock bus lines */
   mdio_ = 1;
   mdc_ = 0;
@@ -142,5 +158,6 @@ int8 mdioInit(void)
   REG_P1SKIP |= MDIO_PORT_MASK | MDC_PORT_MASK;
   /* Enable Crossbar for making MDIO is bidirectional line */  
   REG_XBR2 |= 0x40;
+  isInitialized_ = 1;
   return BOOS_OK;
 }

@@ -410,6 +410,16 @@
               <FileType>1</FileType>
               <FilePath>..\source\driver.mdio.c</FilePath>
             </File>
+            <File>
+              <FileName>driver.ksz.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\driver.ksz.c</FilePath>
+            </File>
+            <File>
+              <FileName>driver.led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\driver.led.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

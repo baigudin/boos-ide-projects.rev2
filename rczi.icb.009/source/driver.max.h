@@ -9,6 +9,9 @@
 
 #include "boos.constants.h"
 
+/**
+ * The device register addresses.
+ */
 enum RegMax
 {
   /**
