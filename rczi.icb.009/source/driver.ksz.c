@@ -72,8 +72,11 @@ int16 kszRead(enum RegKsz regAddr)
     ra = (regAddr & REG_MMD_RA_MASK) >> 0;
     /* Set up register address for MMD */
     mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+    /* Select Register 10h of MMD - Device Address 2h. */
     mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+    /* Select register data for MMD - Device Address 2h, Register 10h. */
     mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+    /* Write value 0001h to MMD - Device Address 2h, Register 10h */
     value = mdioRead(phyAddr_, REG_KSZ_MMD_RD);
   }  
   return value;
@@ -101,8 +104,11 @@ void kszWrite(enum RegKsz regAddr, int16 value)
     ra = (regAddr & REG_MMD_RA_MASK) >> 0;
     /* Set up register address for MMD */
     mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+    /* Select Register 10h of MMD - Device Address 2h. */
     mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+    /* Select register data for MMD - Device Address 2h, Register 10h. */
     mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+    /* Write value 0001h to MMD - Device Address 2h, Register 10h */
     mdioWrite(phyAddr_, REG_KSZ_MMD_RD, value);
   }  
 }
