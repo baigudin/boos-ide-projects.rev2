@@ -15,6 +15,26 @@
 #define RESET_PORT_MASK (0x08)
 
 /**
+ * Access to PHY or MMD register mask.
+ */
+#define REG_PHY_MMD_MASK (0x8000)
+
+/**
+ * PHY register address mask.
+ */
+#define REG_PHY_RA_MASK  (0x001F)
+
+/**
+ * MMD device address mask.
+ */
+#define REG_MMD_DA_MASK  (0x7F00)
+
+/**
+ * MMD register address mask.
+ */
+#define REG_MMD_RA_MASK  (0x001F)
+
+/**
  * Reset pin of MCU port.
  */
 sbit reset_ = REG_P1^3;
@@ -37,8 +57,26 @@ static int8 isInitialized_;
  */
 int16 kszRead(enum RegKsz regAddr)
 {
-  uint16 addr = regAddr & 0x1f;
-  return mdioRead(phyAddr_, addr);   
+  int16 value;
+  uint16 da, ra;
+  /* Accessing to standard registers  */  
+  if(regAddr & REG_PHY_MMD_MASK == 0)
+  {
+    ra = regAddr & REG_PHY_RA_MASK;
+    value = mdioRead(phyAddr_, ra);  
+  }
+  /* Accessing to MDIO Manageable device */
+  else
+  {
+    da = (regAddr & REG_MMD_DA_MASK) >> 8;    
+    ra = (regAddr & REG_MMD_RA_MASK) >> 0;
+    /* Set up register address for MMD */
+    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+    value = mdioRead(phyAddr_, REG_KSZ_MMD_RD);
+  }  
+  return value;
 }
 
 /**
@@ -49,8 +87,24 @@ int16 kszRead(enum RegKsz regAddr)
  */
 void kszWrite(enum RegKsz regAddr, int16 value)
 {
-  uint16 addr = regAddr & 0x1f;
-  mdioWrite(phyAddr_, addr, value);  
+  uint16 da, ra;
+  /* Accessing to standard registers  */  
+  if(regAddr & REG_PHY_MMD_MASK == 0)
+  {
+    ra = regAddr & REG_PHY_RA_MASK;
+    mdioWrite(phyAddr_, ra, value);  
+  }
+  /* Accessing to MDIO Manageable device */
+  else
+  {
+    da = (regAddr & REG_MMD_DA_MASK) >> 8;    
+    ra = (regAddr & REG_MMD_RA_MASK) >> 0;
+    /* Set up register address for MMD */
+    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, value);
+  }  
 }
 
 /**
