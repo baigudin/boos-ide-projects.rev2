@@ -18,6 +18,8 @@
  */
 #define ERROR_CODE_BLINK_TIME (500)
 
+static void(*state)();
+
 /**
  * Configures MAX24287.
  *
@@ -65,16 +67,19 @@ static int8 maxConfig(void)
  */
 static int8 kszConfig(void)
 {
-  kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /*  */
-                           | 0x0 << 14  /*  */
-                           | 0x0 << 13  /*  */
-                           | 0x1 << 12  /*  */
-                           | 0x0 << 10  /*  */
-                           | 0x0 << 8   /*  */  
-                           | 0x0 << 7   /*  */
-                           | 0x0 << 4   /*  */ 
+  kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Override strap-in for RGMII to advertise all capabilities */
+                           | 0x0 << 14  /* Override strap-in for RGMII to advertise all capabilities except 1000-T half-duplex */
+                           | 0x0 << 13  /* Override strap-in for RGMII to advertise 1000-T full and half-duplex only */
+                           | 0x1 << 12  /* Override strap-in for RGMII to advertise 1000-T full-duplex only */
+                           | 0x0 << 10  /* Disable PME output (Pin 38) */
+                           | 0x0 << 8   /* Disable PME output (Pin 17) */  
+                           | 0x0 << 7   /* Not override strap-in for chip power-down mode */
+                           | 0x0 << 4   /* Not override strap-in for NAND Tree mode  */ 
                            | 0x1 << 0   /* Rserved */   
   );  
+  kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Tri-color dual-LED mode */
+                           | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
+  );    
   return BOOS_OK;
 }
 
