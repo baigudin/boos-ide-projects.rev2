@@ -18,7 +18,19 @@
  */
 #define ERROR_CODE_BLINK_TIME (500)
 
-static void(*state)();
+/**
+ * Interrupt resources. 
+ */
+typedef struct _IntRes
+{
+  int8 int0;
+  int8 int1;
+}IntRes;
+
+/**
+ * Interrupt resources. 
+ */
+static IntRes intRes;
 
 /**
  * Configures MAX24287.
@@ -83,6 +95,27 @@ static int8 kszConfig(void)
   return BOOS_OK;
 }
 
+
+/**
+ * Interrupt handler.
+ *
+ * @return error code or zero.
+ */
+static void handlerInt0()
+{
+}
+
+/**
+ * Configures the board.
+ *
+ * @return error code or zero.
+ */
+static int8 boardConfig(void)
+{
+//intRes.int0 = interruptCreate();
+  return BOOS_OK;  
+}
+
 /**
  * User program entry.
  *
@@ -123,6 +156,11 @@ int8 mainStart(void)
     stage++;    
     error = kszConfig();    
     if(error != BOOS_OK){ break; }
+    
+    /* Stage 7 */
+    stage++;    
+    error = boardConfig();    
+    if(error != BOOS_OK){ break; }    
     
   }while(0);
   /* Blink an error code */
