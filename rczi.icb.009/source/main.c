@@ -6,6 +6,7 @@
  */
 #include "boos.main.h"
 #include "boos.driver.interrupt.h"
+#include "boos.driver.comparator.h"
 #include "boos.driver.timer.h"
 #include "boos.system.thread.h"
 #include "driver.led.h"
@@ -19,18 +20,21 @@
 #define ERROR_CODE_BLINK_TIME (500)
 
 /**
- * Interrupt resources. 
+ * The board state.
  */
-typedef struct _IntRes
+typedef struct _Board
 {
-  int8 int0;
-  int8 int1;
-}IntRes;
+  struct _Resource
+  {
+    int8 cmp[2];
+    int8 inr[2];    
+  } res;
+} Board;
 
 /**
- * Interrupt resources. 
+ * The board state.
  */
-static IntRes intRes;
+static Board board_;
 
 /**
  * Configures MAX24287.
@@ -95,13 +99,31 @@ static int8 kszConfig(void)
   return BOOS_OK;
 }
 
+/**
+ * Interrupt handler.
+ */
+static void handlerLinkActiveMax(void)
+{
+}
 
 /**
  * Interrupt handler.
- *
- * @return error code or zero.
  */
-static void handlerInt0()
+static void handlerLinkActiveKsz(void)
+{
+}
+
+/**
+ * Interrupt handler.
+ */
+static void handlerLinkStatusMax(void)
+{
+}
+
+/**
+ * Interrupt handler.
+ */
+static void handlerLinkStatusKsz(void)
 {
 }
 
@@ -112,8 +134,50 @@ static void handlerInt0()
  */
 static int8 boardConfig(void)
 {
-//intRes.int0 = interruptCreate();
-  return BOOS_OK;  
+  int8 error = BOOS_OK;
+  do{
+    /* Create interrupts for active links */
+    board_.res.cmp[0] = comparatorCreate(handlerLinkActiveMax, 0);
+    if(board_.res.cmp[0] == 0)
+    {
+      error = BOOS_ERROR;      
+      break;
+    }
+    board_.res.cmp[1] = comparatorCreate(handlerLinkActiveKsz, 1);
+    if(board_.res.cmp[1] == 0)
+    {
+      error = BOOS_ERROR;      
+      break;
+    }
+    /* Create interrupts for status links */    
+    board_.res.inr[0] = interruptCreate(handlerLinkStatusMax, 0);
+    if(board_.res.inr[0] == 0)
+    {
+      break;
+    }
+    board_.res.inr[1] = interruptCreate(handlerLinkStatusKsz, 2);
+    if(board_.res.inr[1] == 0)
+    {
+      break;
+    }
+    comparatorSetInput(board_.res.cmp[0], 0xD, 0x1);
+    comparatorSetInput(board_.res.cmp[0], 0xD, 0x7);    
+    /* Enable interrupts */
+    comparatorIntEnable(board_.res.cmp[0], 1);
+    comparatorIntEnable(board_.res.cmp[1], 1);
+    interruptEnable(board_.res.inr[0], 1);        
+    interruptEnable(board_.res.inr[1], 1);    
+  }while(0);
+  return error;  
+}
+
+/**
+ * Execut user program.
+ */
+void executing(void)
+{
+  volatile int8 exe = 1;
+  while(exe){};
 }
 
 /**
@@ -161,6 +225,10 @@ int8 mainStart(void)
     stage++;    
     error = boardConfig();    
     if(error != BOOS_OK){ break; }    
+
+    /* Stage complete */    
+    stage = 0;    
+    executing();
     
   }while(0);
   /* Blink an error code */
