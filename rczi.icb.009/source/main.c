@@ -13,6 +13,7 @@
 #include "driver.mdio.h"
 #include "driver.max.h"
 #include "driver.ksz.h"
+#include "driver.registers.h"
 
 /**
  * Error code blink time in milliseconds. 
@@ -37,14 +38,44 @@ typedef struct _Board
 static Board board_;
 
 /**
+ * Interrupt handler of CP 0.
+ */
+static void handlerLinkActiveMax(void)
+{
+}
+
+/**
+ * Interrupt handler of INT 0.
+ */
+static void handlerLinkStatusMax(void)
+{
+}
+
+/**
+ * Interrupt handler of CP 1.
+ */
+static void handlerLinkActiveKsz(void)
+{
+}
+
+/**
+ * Interrupt handler of INT 1.
+ */
+static void handlerLinkStatusKsz(void)
+{
+}
+
+/**
  * Configures MAX24287.
  *
  * @return error code or zero.
  */
 static int8 maxConfig(void)
 {
-  maxWrite(REG_MAX_GPIOCR1, 0x3 << 12  /* GPO1: Interrupt output, active low */
-                          | 0x6 << 9   /* GPO2: Output real-time link status, 0=link down, 1=link up */
+  int8 error = BOOS_OK;
+  
+  maxWrite(REG_MAX_GPIOCR1, 0x1 << 12  /* 3 GPO1: Interrupt output, active low */
+                          | 0x6 << 9   /* 6 GPO2: Output real-time link status, 0=link down, 1=link up */
                           | 0x1 << 6   /* GPIO1: Drive logic 0 */
                           | 0x1 << 3   /* GPIO2: Drive logic 0 */
                           | 0x1 << 0   /* GPIO3: Drive logic 0 */
@@ -72,8 +103,40 @@ static int8 maxConfig(void)
                           | 0x1 << 7   /* Write as 1 */                          
                           | 0x0 << 3   /* Noninverted */
                           | 0x0 << 0   /* Disable remote loopback */
-  );                          
-  return BOOS_OK;
+  );
+
+  do{
+    /* Create interrupts for active links */
+    // board_.res.cmp[0] = comparatorCreate(handlerLinkActiveMax, 0);
+    // if(board_.res.cmp[0] == 0)
+    // {
+    //   error = BOOS_ERROR;      
+    //   break;
+    // }
+    // 
+    // comparatorSetInput(board_.res.cmp[0], 0xD, 0x1);
+    // comparatorIntEnable(board_.res.cmp[0], 1);
+    
+    /* Create interrupts for status links */    
+    board_.res.inr[0] = interruptCreate(handlerLinkStatusMax, 0);
+    if(board_.res.inr[0] == 0)
+    {
+      error = BOOS_ERROR;
+      break;
+    }
+    
+    REG_TCON &= 0xFC;
+    REG_TCON |= 0x0 << 1  /* External Interrupt 0 flag is cleared */  
+             |  0x1 << 0; /* External Interrupt 0 is edge triggered */   
+    
+    REG_IT01CF &= 0xFC;
+    REG_IT01CF |= 0x1 << 3  /* INT0 input is active high */
+               |  0x1 << 0; /* INT0 is P0.1 */        
+    
+    interruptEnable(board_.res.inr[0], 1);        
+
+  }while(0);
+  return error;
 }
 
 /**
@@ -83,6 +146,11 @@ static int8 maxConfig(void)
  */
 static int8 kszConfig(void)
 {
+  int8 error = BOOS_OK;  
+
+  /* TODO */
+  return error;    
+  
   kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Override strap-in for RGMII to advertise all capabilities */
                            | 0x0 << 14  /* Override strap-in for RGMII to advertise all capabilities except 1000-T half-duplex */
                            | 0x0 << 13  /* Override strap-in for RGMII to advertise 1000-T full and half-duplex only */
@@ -95,81 +163,42 @@ static int8 kszConfig(void)
   );  
   kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Tri-color dual-LED mode */
                            | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
-  );    
-  return BOOS_OK;
-}
+  );
 
-/**
- * Interrupt handler.
- */
-static void handlerLinkActiveMax(void)
-{
-}
-
-/**
- * Interrupt handler.
- */
-static void handlerLinkActiveKsz(void)
-{
-}
-
-/**
- * Interrupt handler.
- */
-static void handlerLinkStatusMax(void)
-{
-}
-
-/**
- * Interrupt handler.
- */
-static void handlerLinkStatusKsz(void)
-{
-}
-
-/**
- * Configures the board.
- *
- * @return error code or zero.
- */
-static int8 boardConfig(void)
-{
-  int8 error = BOOS_OK;
   do{
     /* Create interrupts for active links */
-    board_.res.cmp[0] = comparatorCreate(handlerLinkActiveMax, 0);
-    if(board_.res.cmp[0] == 0)
-    {
-      error = BOOS_ERROR;      
-      break;
-    }
     board_.res.cmp[1] = comparatorCreate(handlerLinkActiveKsz, 1);
     if(board_.res.cmp[1] == 0)
     {
       error = BOOS_ERROR;      
       break;
     }
+    
+    comparatorSetInput(board_.res.cmp[1], 0xD, 0x7);    
+    comparatorIntEnable(board_.res.cmp[1], 1);
+    
     /* Create interrupts for status links */    
-    board_.res.inr[0] = interruptCreate(handlerLinkStatusMax, 0);
-    if(board_.res.inr[0] == 0)
-    {
-      break;
-    }
     board_.res.inr[1] = interruptCreate(handlerLinkStatusKsz, 2);
     if(board_.res.inr[1] == 0)
     {
+      error = BOOS_ERROR;
       break;
     }
-    comparatorSetInput(board_.res.cmp[0], 0xD, 0x1);
-    comparatorSetInput(board_.res.cmp[0], 0xD, 0x7);    
-    /* Enable interrupts */
-    comparatorIntEnable(board_.res.cmp[0], 1);
-    comparatorIntEnable(board_.res.cmp[1], 1);
-    interruptEnable(board_.res.inr[0], 1);        
-    interruptEnable(board_.res.inr[1], 1);    
+    
+    REG_TCON &= 0xF3;
+    REG_TCON |=  0x0 << 3  /* External Interrupt 1 flag is cleared */
+               | 0x1 << 2; /* External Interrupt 1 is edge triggered */
+    
+    REG_IT01CF &= 0xF3;    
+    REG_IT01CF |= 0x0 << 7  /* INT1 input is active low */
+               |  0x0 << 4; /* INT1 is P0.0 */
+    
+    interruptEnable(board_.res.inr[1], 1);     
+
   }while(0);
-  return error;  
+  return error;
 }
+
 
 /**
  * Execut user program.
@@ -187,7 +216,8 @@ void executing(void)
  */
 int8 mainStart(void)
 {
-  int8 i, stage, error;   
+  int8 i, stage, error, is;   
+  is = interruptGlobalDisable();
   stage = 0;
   error = BOOS_OK;
   do{
@@ -220,14 +250,10 @@ int8 mainStart(void)
     stage++;    
     error = kszConfig();    
     if(error != BOOS_OK){ break; }
-    
-    /* Stage 7 */
-    stage++;    
-    error = boardConfig();    
-    if(error != BOOS_OK){ break; }    
 
     /* Stage complete */    
-    stage = 0;    
+    stage = 0;
+    interruptGlobalEnable(is);
     executing();
     
   }while(0);
