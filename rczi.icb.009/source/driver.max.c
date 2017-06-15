@@ -63,10 +63,11 @@ static int8 isInitialized_;
 int16 maxRead(enum RegMax regAddr)
 {
   int16 value;
-  uint16 addr = regAddr & REG_ADDR_MASK;
-  uint16 page = regAddr >> REG_PAGE_SHIFT & REG_PAGE_MASK;
+  uint16 addr, page;
   if(isInitialized_)
   {   
+    addr = regAddr & REG_ADDR_MASK;
+    page = regAddr >> REG_PAGE_SHIFT & REG_PAGE_MASK;
     if(page != page_)
     {
       mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, page | 0x0010);
@@ -89,10 +90,11 @@ int16 maxRead(enum RegMax regAddr)
  */
 void maxWrite(enum RegMax regAddr, int16 value)
 {
-  uint16 addr = regAddr & REG_ADDR_MASK;
-  uint16 page = regAddr >> REG_PAGE_SHIFT & REG_PAGE_MASK;
+  uint16 addr, page; 
   if(isInitialized_)
-  {   
+  { 
+    addr = regAddr & REG_ADDR_MASK;    
+    page = regAddr >> REG_PAGE_SHIFT & REG_PAGE_MASK;    
     if(page != page_)
     {
       mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, page | 0x0010);
@@ -132,9 +134,6 @@ int8 maxInit(void)
       break;
     }      
   }
-  /* Set zero register page */
-  mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, 0x0010);
-  page_ = 0;  
   /* The device ID checking */
   if(error == BOOS_OK)
   {
@@ -145,7 +144,6 @@ int8 maxInit(void)
     {
       /* Set zero register page */
       mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, 0x0010);
-      page_ = 0;        
     }
     /* Revision B */    
     else if((val & 0x0fff) == 0x0ee0)
@@ -162,8 +160,6 @@ int8 maxInit(void)
       /* Set the BMCR.DP_RST bit to reset the datapath */
       mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, 0x0010);
       mdioWrite(PHY_ADDR, REG_MAX_BMCR & REG_ADDR_MASK, 0x8000);
-      val = mdioRead(PHY_ADDR, REG_MAX_BMCR & REG_ADDR_MASK);  
-      page_ = 0;
     }  
     else
     {
@@ -172,6 +168,7 @@ int8 maxInit(void)
   }
   if(error == BOOS_OK)
   {
+    page_ = 0;    
     isInitialized_ = 1;  
   }  
   return error;

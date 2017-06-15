@@ -425,6 +425,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.comparator.c</FilePath>
             </File>
+            <File>
+              <FileName>board.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\board.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

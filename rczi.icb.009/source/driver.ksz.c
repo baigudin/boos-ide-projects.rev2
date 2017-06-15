@@ -59,26 +59,33 @@ int16 kszRead(enum RegKsz regAddr)
 {
   int16 value;
   uint16 da, ra;
-  /* Accessing to standard registers  */  
-  if(regAddr & REG_PHY_MMD_MASK == 0)
-  {
-    ra = regAddr & REG_PHY_RA_MASK;
-    value = mdioRead(phyAddr_, ra);  
+  if(isInitialized_)
+  {  
+    /* Accessing to standard registers  */  
+    if(regAddr & REG_PHY_MMD_MASK == 0)
+    {
+      ra = regAddr & REG_PHY_RA_MASK;
+      value = mdioRead(phyAddr_, ra);  
+    }
+    /* Accessing to MDIO Manageable device */
+    else
+    {
+      da = (regAddr & REG_MMD_DA_MASK) >> 8;    
+      ra = (regAddr & REG_MMD_RA_MASK) >> 0;
+      /* Set up register address for MMD */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+      /* Select Register 10h of MMD - Device Address 2h. */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+      /* Select register data for MMD - Device Address 2h, Register 10h. */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+      /* Write value 0001h to MMD - Device Address 2h, Register 10h */
+      value = mdioRead(phyAddr_, REG_KSZ_MMD_RD);
+    }  
   }
-  /* Accessing to MDIO Manageable device */
   else
   {
-    da = (regAddr & REG_MMD_DA_MASK) >> 8;    
-    ra = (regAddr & REG_MMD_RA_MASK) >> 0;
-    /* Set up register address for MMD */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
-    /* Select Register 10h of MMD - Device Address 2h. */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
-    /* Select register data for MMD - Device Address 2h, Register 10h. */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
-    /* Write value 0001h to MMD - Device Address 2h, Register 10h */
-    value = mdioRead(phyAddr_, REG_KSZ_MMD_RD);
-  }  
+    value = -1;
+  }
   return value;
 }
 
@@ -91,26 +98,29 @@ int16 kszRead(enum RegKsz regAddr)
 void kszWrite(enum RegKsz regAddr, int16 value)
 {
   uint16 da, ra;
-  /* Accessing to standard registers  */  
-  if(regAddr & REG_PHY_MMD_MASK == 0)
-  {
-    ra = regAddr & REG_PHY_RA_MASK;
-    mdioWrite(phyAddr_, ra, value);  
+  if(isInitialized_)
+  { 
+    /* Accessing to standard registers  */  
+    if(regAddr & REG_PHY_MMD_MASK == 0)
+    {
+      ra = regAddr & REG_PHY_RA_MASK;
+      mdioWrite(phyAddr_, ra, value);  
+    }
+    /* Accessing to MDIO Manageable device */
+    else
+    {
+      da = (regAddr & REG_MMD_DA_MASK) >> 8;    
+      ra = (regAddr & REG_MMD_RA_MASK) >> 0;
+      /* Set up register address for MMD */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
+      /* Select Register 10h of MMD - Device Address 2h. */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
+      /* Select register data for MMD - Device Address 2h, Register 10h. */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
+      /* Write value 0001h to MMD - Device Address 2h, Register 10h */
+      mdioWrite(phyAddr_, REG_KSZ_MMD_RD, value);
+    }
   }
-  /* Accessing to MDIO Manageable device */
-  else
-  {
-    da = (regAddr & REG_MMD_DA_MASK) >> 8;    
-    ra = (regAddr & REG_MMD_RA_MASK) >> 0;
-    /* Set up register address for MMD */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da);
-    /* Select Register 10h of MMD - Device Address 2h. */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, ra);
-    /* Select register data for MMD - Device Address 2h, Register 10h. */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_CTL, da | 0x4000);
-    /* Write value 0001h to MMD - Device Address 2h, Register 10h */
-    mdioWrite(phyAddr_, REG_KSZ_MMD_RD, value);
-  }  
 }
 
 /**
