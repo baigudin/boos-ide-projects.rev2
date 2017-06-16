@@ -39,10 +39,19 @@ static Board board_;
 
 /**
  * Interrupt handler of CP 0.
+ *
+ * @param out an output comparator value.
  */
-static void handlerComparator0(void)
+static void handlerComparator0(int8 out)
 {
-  uint16 ir = maxRead(REG_MAX_IR);
+  if(out == 0)
+  {
+    ledToggle(LED_X, 0);
+  }
+  else
+  {
+    ledToggle(LED_X, 1);    
+  }
 }
 
 /**
@@ -55,8 +64,10 @@ static void handlerInterrupt0(void)
 
 /**
  * Interrupt handler of CP 1.
+ *
+ * @param out an output comparator value.
  */
-static void handlerComparator1(void)
+static void handlerComparator1(int8 out)
 {
 }
 
@@ -140,7 +151,7 @@ static int8 maxConfig(void)
 }
 
 /**
- * Configures MAX24287.
+ * Configures KSZ9031RNX.
  *
  * @return error code or zero.
  */
@@ -197,14 +208,15 @@ static int8 kszConfig(void)
   return error;
 }
 
-
 /**
- * Execut user program.
+ * Executes machine states.
  */
-void executing(void)
+void machine(void)
 {
   volatile int8 exe = 1;
-  while(exe){};
+  while(exe)
+  {
+  };
 }
 
 /**
@@ -231,7 +243,7 @@ int8 mainStart(void)
 
     /* Stage complete */    
     stage = 0;
-    executing();
+    machine();
     
   }while(0);
   /* Blink an error code */
