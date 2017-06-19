@@ -38,7 +38,14 @@ typedef struct _Board
 static Board board_;
 
 /**
- * Interrupt handler of CP 0.
+ * Interrupt handler of CP0.
+ * 
+ * The handler serves MAX24287 chip output real-time link status.
+ * It is initialized to get interrupt by rising-edge and falling-edge of
+ * a signal, which goes out from GPIO1 pin of the chip and goes in to P0.2
+ * of the CPU. Having gotten zero value as the agrument of the function, which is 
+ * a result of comparation of the signal and VDD divided by 2, the function
+ * interprets that as the link is down, otherwise the link is up.
  *
  * @param out an output comparator value.
  */
@@ -158,9 +165,6 @@ static int8 maxConfig(void)
 static int8 kszConfig(void)
 {
   int8 error = BOOS_OK;  
-
-  /* TODO */
-  return error;    
   
   kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Override strap-in for RGMII to advertise all capabilities */
                            | 0x0 << 14  /* Override strap-in for RGMII to advertise all capabilities except 1000-T half-duplex */
@@ -175,7 +179,13 @@ static int8 kszConfig(void)
   kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Tri-color dual-LED mode */
                            | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
   );
-
+  
+  /* 02.08 = 0x01ff */  
+  /* 01.5A = 0x0106 */
+  /* 1C.23 = 0x0001 */    
+  /* 00.04 = 0x0006 */  
+  /* 00.03 = 0x1A80 */    
+  
   do{
     /* Create comparison P1.6 on CP+ with VDD/2 on CP- */
     board_.res.cmp[1] = comparatorCreate(&handlerComparator1, 1, 0xD, 0x7);
