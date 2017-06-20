@@ -72,10 +72,25 @@ static void handlerInterrupt0(void)
 /**
  * Interrupt handler of CP 1.
  *
+ * The handler serves KSZ9031RNX chip output real-time link status in Single-LED Mode.
+ * It is initialized to get interrupt by rising-edge and falling-edge of
+ * a signal, which goes out from LED2 pin of the chip and goes in to P1.6
+ * of the CPU. Having gotten zero value as the agrument of the function, which is 
+ * a result of comparation of the signal and VDD divided by 2, the function
+ * interprets that as the link is up, otherwise the link is down.
+ *
  * @param out an output comparator value.
  */
 static void handlerComparator1(int8 out)
 {
+  if(out == 0)
+  {
+    ledToggle(LED_T, 1);        
+  }
+  else
+  {
+    ledToggle(LED_T, 0);    
+  }  
 }
 
 /**
@@ -135,7 +150,7 @@ static int8 maxConfig(void)
     }
     comparatorIntEnable(board_.res.cmp[0], 1);
     
-    /* Create interrupts for status links */    
+    /* Create interrupts for the link activity */    
     board_.res.inr[0] = interruptCreate(&handlerInterrupt0, 0);
     if(board_.res.inr[0] == 0)
     {
@@ -166,6 +181,7 @@ static int8 kszConfig(void)
 {
   int8 error = BOOS_OK;  
   
+  /* Operation Mode Strap Override (device 2 register 2) */
   kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Override strap-in for RGMII to advertise all capabilities */
                            | 0x0 << 14  /* Override strap-in for RGMII to advertise all capabilities except 1000-T half-duplex */
                            | 0x0 << 13  /* Override strap-in for RGMII to advertise 1000-T full and half-duplex only */
@@ -174,17 +190,57 @@ static int8 kszConfig(void)
                            | 0x0 << 8   /* Disable PME output (Pin 17) */  
                            | 0x0 << 7   /* Not override strap-in for chip power-down mode */
                            | 0x0 << 4   /* Not override strap-in for NAND Tree mode  */ 
-                           | 0x1 << 0   /* Rserved */   
-  );  
-  kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Tri-color dual-LED mode */
+  ); 
+
+  /* Common Control (device 2 register 0) */  
+  kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Single-LED mode */
                            | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
   );
   
-  /* 02.08 = 0x01ff */  
-  /* 01.5A = 0x0106 */
-  /* 1C.23 = 0x0001 */    
-  /* 00.04 = 0x0006 */  
-  /* 00.03 = 0x1A80 */    
+  /*  RGMII Clock Pad Skew (device 2 register 8) */
+  kszWrite(REG_KSZ_MMD_GMII_CLK_PS, 0x0f << 5   /* RGMII GTX_CLK input +0.00 ns additional delay */
+                                  | 0x1f << 0   /* RGMII RX_CLK output +0.96 ns additional delay */ 
+  );
+
+  /* Basic Control */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x1 << 13  /* Speed Select (LSB): 100 Mbps */   
+                       | 0x0 << 12  /* Disable auto-negotiation process */ 
+                       | 0x0 << 11  /* Power-Down: Normal operation  */
+                       | 0x0 << 10  /* Isolate: Normal operation */ 
+                       | 0x0 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
+                       | 0x0 << 6   /* Speed Select (MSB): 100 Mbps */                        
+  );
+  
+  /* 1000BASE-T Link-Up Time Control (device 1 register 5Ah) */
+  kszWrite(REG_KSZ_MMD_1000T_LTC,  0x3 << 3); /* Optional setting to reduce link-up time */
+
+  /* Basic Control */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x0 << 13  /* Speed Select (LSB): 1000 Mbps */   
+                       | 0x1 << 12  /* Enable auto-negotiation process */ 
+                       | 0x0 << 11  /* Power-Down: Normal operation  */
+                       | 0x0 << 10  /* Isolate: Normal operation */ 
+                       | 0x0 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
+                       | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps */                        
+  );
+  
+  kszWrite(REG_KSZ_MMD_AN_FLP_BT_HI, 0x0006 << 0);  /* Select 16 ms interval timing */
+  
+  kszWrite(REG_KSZ_MMD_AN_FLP_BT_LO, 0x1A80 << 0);  /* Select 16 ms interval timing */ 
+  
+  /* Basic Control */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x0 << 13  /* Speed Select (LSB): 1000 Mbps */   
+                       | 0x1 << 12  /* Enable auto-negotiation process */ 
+                       | 0x0 << 11  /* Power-Down: Normal operation  */
+                       | 0x0 << 10  /* Isolate: Normal operation */ 
+                       | 0x1 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
+                       | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps */                        
+  );
   
   do{
     /* Create comparison P1.6 on CP+ with VDD/2 on CP- */
@@ -196,7 +252,7 @@ static int8 kszConfig(void)
     }
     comparatorIntEnable(board_.res.cmp[1], 1);
     
-    /* Create interrupts for status links */    
+    /* Create interrupts for the link activity */
     board_.res.inr[1] = interruptCreate(&handlerInterrupt1, 2);
     if(board_.res.inr[1] == 0)
     {
@@ -205,8 +261,8 @@ static int8 kszConfig(void)
     }
     
     REG_TCON &= 0xF3;
-    REG_TCON |=  0x0 << 3  /* External Interrupt 1 flag is cleared */
-               | 0x1 << 2; /* External Interrupt 1 is edge triggered */
+    REG_TCON |= 0x0 << 3  /* External Interrupt 1 flag is cleared */
+             |  0x1 << 2; /* External Interrupt 1 is edge triggered */
     
     REG_IT01CF &= 0xF3;    
     REG_IT01CF |= 0x0 << 7  /* INT1 input is active low */
