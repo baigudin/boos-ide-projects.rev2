@@ -227,8 +227,10 @@ static int8 kszConfig(void)
                        | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps */                        
   );
   
+  /* Burst Transmit - HI (device 0 register 4) */
   kszWrite(REG_KSZ_MMD_AN_FLP_BT_HI, 0x0006 << 0);  /* Select 16 ms interval timing */
   
+  /* Burst Transmit - LO (device 0 register 3) */
   kszWrite(REG_KSZ_MMD_AN_FLP_BT_LO, 0x1A80 << 0);  /* Select 16 ms interval timing */ 
   
   /* Basic Control */
