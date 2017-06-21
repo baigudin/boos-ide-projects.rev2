@@ -132,7 +132,7 @@ enum RegKsz
   /**
    * 1000BASE-T Link-Up Time Control.
    */
-  REG_KSZ_MMD_1000T_LTC = 0x815A,
+  REG_KSZ_MMD_1000T_LUTC = 0x815A,
 
   /**
    * Common Control.

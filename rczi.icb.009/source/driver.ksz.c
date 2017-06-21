@@ -62,7 +62,7 @@ int16 kszRead(enum RegKsz regAddr)
   if(isInitialized_)
   {  
     /* Accessing to standard registers  */  
-    if(regAddr & REG_PHY_MMD_MASK == 0)
+    if( (regAddr & REG_PHY_MMD_MASK) == 0 )
     {
       ra = regAddr & REG_PHY_RA_MASK;
       value = mdioRead(phyAddr_, ra);  
@@ -101,7 +101,7 @@ void kszWrite(enum RegKsz regAddr, int16 value)
   if(isInitialized_)
   { 
     /* Accessing to standard registers  */  
-    if(regAddr & REG_PHY_MMD_MASK == 0)
+    if( (regAddr & REG_PHY_MMD_MASK) == 0 )
     {
       ra = regAddr & REG_PHY_RA_MASK;
       mdioWrite(phyAddr_, ra, value);  
