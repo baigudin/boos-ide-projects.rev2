@@ -137,7 +137,7 @@ enum RegKsz
   /**
    * Common Control.
    */
-  REG_KSZ_MMD_CNT = 0x8200,
+  REG_KSZ_MMD_CC = 0x8200,
   
   /**
    * Strap Status.

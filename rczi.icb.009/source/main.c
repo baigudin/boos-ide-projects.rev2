@@ -83,6 +83,7 @@ static void handlerInterrupt0(void)
  */
 static void handlerComparator1(int8 out)
 {
+  int16 bs = kszRead(REG_KSZ_BMSR);
   if(out == 0)
   {
     ledToggle(LED_T, 1);        
@@ -107,14 +108,19 @@ static void handlerInterrupt1(void)
  */
 static int8 maxConfig(void)
 {
-  int8 error = BOOS_OK;
+  int8 error;
+  int16 value;
+  error = BOOS_OK;
   
-  maxWrite(REG_MAX_GPIOCR1, 0x6 << 12  /* 3 GPO1: Output real-time link status, 0=link down, 1=link up */
-                          | 0x1 << 9   /* 6 GPO2: Output CRS (carrier sense) status */
+  /* Set outputs of GPO1 and GPO2 */
+  maxWrite(REG_MAX_GPIOCR1, 0x6 << 12  /* GPO1: Output real-time link status, 0=link down, 1=link up */
+                          | 0x1 << 9   /* GPO2: Output CRS (carrier sense) status */
                           | 0x1 << 6   /* GPIO1: Drive logic 0 */
                           | 0x1 << 3   /* GPIO2: Drive logic 0 */
                           | 0x1 << 0   /* GPIO3: Drive logic 0 */
   );
+  
+  /* Set values of GPIO4 to GPIO7 */
   maxWrite(REG_MAX_GPIOCR2, 0x0 << 13  /* Set latched status bit when input goes low */
                           | 0x0 << 12  /* Set latched status bit when input goes low */  
                           | 0x1 << 9   /* GPIO7: Drive logic 0 */  
@@ -122,6 +128,8 @@ static int8 maxConfig(void)
                           | 0x1 << 3   /* GPIO5: Drive logic 0 */  
                           | 0x1 << 0   /* GPIO4: Drive logic 0 */
   );
+  
+  /* Set default values of PCS Control Register */  
   maxWrite(REG_MAX_PCSCR,   0x0 << 14  /* PCS link timer has normal timeout */
                           | 0x0 << 13  /* Enable PCS receive running disparity */  
                           | 0x0 << 12  /* Enable PCS transmit running disparity */  
@@ -129,7 +137,9 @@ static int8 maxConfig(void)
                           | 0x0 << 4   /* SGMII PCS mode selected */  
                           | 0x0 << 1   /* Disable terminal loopback */
                           | 0x1 << 0   /* Enable comma alignment */
-  );                        
+  );             
+  
+  /* Set RGMII-1000 parallel interface mode */  
   maxWrite(REG_MAX_GMIICR,  0x2 << 14  /* 1000 Mbps GMII RGMII-1000 */
                           | 0x0 << 13  /* TBI with one 125MHz receive clock (RXCLK pin) */
                           | 0x0 << 12  /* MII-DCE (MAX24287 on PHY side of MII, both RXCLK and TXCLK are outputs) */
@@ -139,6 +149,26 @@ static int8 maxConfig(void)
                           | 0x0 << 3   /* Noninverted */
                           | 0x0 << 0   /* Disable remote loopback */
   );
+  
+  /* Set Auto-Negotiation Advertisement */  
+  maxWrite(REG_MAX_AN_ADV,  0x9801
+  );  
+  
+  /* Set PTP Control Register 1 */  
+  maxWrite(REG_MAX_PTPCR1,  0x1 << 14  /* Write 1 */
+                          | 0x0 << 5   /* TX PLL Power-down disabled */
+                          | 0x1 << 3   /* Serial Interface Transmit Power-down disabled */
+                          | 0x1 << 2   /* Serial Interface Receive Power-down disabled */                          
+  );    
+  
+  /* Set PTP Control Register 1 */  
+  maxWrite(REG_MAX_PTPCR1,  0x1 << 14  /* Write 1 */
+                          | 0x0 << 5   /* TX PLL Power-down disabled */
+                          | 0x0 << 3   /* Serial Interface Transmit Power-down disabled */
+                          | 0x0 << 2   /* Serial Interface Receive Power-down disabled */                          
+  );  
+  
+  value = maxRead(REG_MAX_AN_ADV);  
 
   do{
     /* Create comparison P0.2 on CP+ with VDD/2 on CP- */
@@ -179,71 +209,96 @@ static int8 maxConfig(void)
  */
 static int8 kszConfig(void)
 {
-  int8 error = BOOS_OK;  
+  int8 error;
+  int16 value;
+  
+  error = BOOS_OK;
+  
+  /* Make an erratum recommendation to correct long link-up time due to default 
+     FLP interval setting. Change 8ms default FLP burst-to-burst timing to
+     16ms IEEE Standard specified timing after the device power-up/reset */
+  
+  /* Set Burst Transmit 16 ms period as the typical by writing to device 0 register 4 and 3 */
+  kszWrite(REG_KSZ_MMD_AN_FLP_BT_HI, 0x0006 << 0);  /* Select 16 ms interval timing */  
+  kszWrite(REG_KSZ_MMD_AN_FLP_BT_LO, 0x1A80 << 0);  /* Select 16 ms interval timing */
+  
+  /* Enable auto-negotiation */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 15  /* No reset */
+                       | 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x0 << 13  /* Speed Select (LSB): 10 Mbps if auto-negotiation is disabled */
+                       | 0x1 << 12  /* Enable auto-negotiation process */ 
+                       | 0x0 << 11  /* Power-Down: Normal operation  */
+                       | 0x0 << 10  /* Isolate: Normal operation */ 
+                       | 0x1 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x0 << 8   /* Duplex Mode: Full-duplex */ 
+                       | 0x0 << 6   /* Speed Select (MSB): 10 Mbps if auto-negotiation is disabled */
+  );
+  
+  /* Override strap-in options for the device */
+
+  /* Common Control (device 2 register 0) */  
+  kszWrite(REG_KSZ_MMD_CC, 0x1 << 4   /* Single-LED mode */
+                         | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
+  );      
   
   /* Operation Mode Strap Override (device 2 register 2) */
-  kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Override strap-in for RGMII to advertise all capabilities */
-                           | 0x0 << 14  /* Override strap-in for RGMII to advertise all capabilities except 1000-T half-duplex */
-                           | 0x0 << 13  /* Override strap-in for RGMII to advertise 1000-T full and half-duplex only */
-                           | 0x1 << 12  /* Override strap-in for RGMII to advertise 1000-T full-duplex only */
+  kszWrite(REG_KSZ_MMD_OMSO, 0x0 << 15  /* Advertise all capabilities */
+                           | 0x0 << 14  /* Advertise all capabilities except 1000-T half-duplex */
+                           | 0x0 << 13  /* Advertise 1000-T full and half-duplex only */
+                           | 0x1 << 12  /* Advertise 1000-T full-duplex only */
                            | 0x0 << 10  /* Disable PME output (Pin 38) */
                            | 0x0 << 8   /* Disable PME output (Pin 17) */  
                            | 0x0 << 7   /* Not override strap-in for chip power-down mode */
-                           | 0x0 << 4   /* Not override strap-in for NAND Tree mode  */ 
-  ); 
+                           | 0x0 << 4   /* Not override strap-in for NAND Tree mode */ 
+                           | 0x1 << 0   /* The bit is described as reserved, but it must be set to one
+                                           for overriding the straped options */
+  );   
 
-  /* Common Control (device 2 register 0) */  
-  kszWrite(REG_KSZ_MMD_CNT,  0x1 << 4   /* Single-LED mode */
-                           | 0x0 << 1   /* CLK125_EN strap-in is disabled */ 
+  /* Make software reset of the device */
+  value = kszRead(REG_KSZ_BMCR);
+  kszWrite(REG_KSZ_BMCR, 0x1 << 15  /* Reset*/
+                       | value
   );
   
-  /*  RGMII Clock Pad Skew (device 2 register 8) */
+  /* Sleep as defined in IEEE 802.3 */
+  threadSleep(500);  
+  
+  /* Set max available delay of RXCLK by RGMII Clock Pad Skew (device 2 register 8) */
   kszWrite(REG_KSZ_MMD_GMII_CLK_PS, 0x0f << 5   /* RGMII GTX_CLK input +0.00 ns additional delay */
                                   | 0x1f << 0   /* RGMII RX_CLK output +0.96 ns additional delay */ 
   );
 
-  /* Basic Control */
-  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
-                       | 0x1 << 13  /* Speed Select (LSB): 100 Mbps */   
+  /* Reduce link-up time, therefore accessing to 1000BASE-T Link-Up Time Control 
+     register will be available only when Basic Control register is set to 0x2100 
+     to disable auto-negotiation and force 100BASE-TX mode */
+
+  /* Set 0x2100 to Basic Control */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 15  /* No reset */
+                       | 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x1 << 13  /* Speed Select (LSB): 100 Mbps if auto-negotiation is disabled */
                        | 0x0 << 12  /* Disable auto-negotiation process */ 
                        | 0x0 << 11  /* Power-Down: Normal operation  */
                        | 0x0 << 10  /* Isolate: Normal operation */ 
                        | 0x0 << 9   /* Restart Auto-Negotiation: Normal operation */ 
                        | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
-                       | 0x0 << 6   /* Speed Select (MSB): 100 Mbps */                        
-  );
+                       | 0x0 << 6   /* Speed Select (MSB): 100 Mbps if auto-negotiation is disabled */
+  ); 
   
-  /* 1000BASE-T Link-Up Time Control (device 1 register 5Ah) */
-  kszWrite(REG_KSZ_MMD_1000T_LTC,  0x3 << 3); /* Optional setting to reduce link-up time */
-
-  /* Basic Control */
-  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
-                       | 0x0 << 13  /* Speed Select (LSB): 1000 Mbps */   
-                       | 0x1 << 12  /* Enable auto-negotiation process */ 
-                       | 0x0 << 11  /* Power-Down: Normal operation  */
-                       | 0x0 << 10  /* Isolate: Normal operation */ 
-                       | 0x0 << 9   /* Restart Auto-Negotiation: Normal operation */ 
-                       | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
-                       | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps */                        
-  );
+  /* Reduce link-up time by 1000BASE-T Link-Up Time Control (device 1 register 5Ah) */
+  kszWrite(REG_KSZ_MMD_1000T_LUTC,  0x3 << 1); /* Optional setting to reduce link-up time */
   
-  /* Burst Transmit - HI (device 0 register 4) */
-  kszWrite(REG_KSZ_MMD_AN_FLP_BT_HI, 0x0006 << 0);  /* Select 16 ms interval timing */
-  
-  /* Burst Transmit - LO (device 0 register 3) */
-  kszWrite(REG_KSZ_MMD_AN_FLP_BT_LO, 0x1A80 << 0);  /* Select 16 ms interval timing */ 
-  
-  /* Basic Control */
-  kszWrite(REG_KSZ_BMCR, 0x0 << 14  /* Loopback: Normal operation*/
-                       | 0x0 << 13  /* Speed Select (LSB): 1000 Mbps */   
+  /* Enable auto-negotiation */
+  kszWrite(REG_KSZ_BMCR, 0x0 << 15  /* No reset */
+                       | 0x0 << 14  /* Loopback: Normal operation*/
+                       | 0x0 << 13  /* Speed Select (LSB): 1000 Mbps if auto-negotiation is disabled */
                        | 0x1 << 12  /* Enable auto-negotiation process */ 
                        | 0x0 << 11  /* Power-Down: Normal operation  */
                        | 0x0 << 10  /* Isolate: Normal operation */ 
                        | 0x1 << 9   /* Restart Auto-Negotiation: Normal operation */ 
                        | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
-                       | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps */                        
-  );
-  
+                       | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps if auto-negotiation is disabled */
+  );  
+ 
   do{
     /* Create comparison P1.6 on CP+ with VDD/2 on CP- */
     board_.res.cmp[1] = comparatorCreate(&handlerComparator1, 1, 0xD, 0x7);
