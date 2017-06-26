@@ -129,16 +129,6 @@ static int8 maxConfig(void)
                           | 0x1 << 0   /* GPIO4: Drive logic 0 */
   );
   
-  /* Set default values of PCS Control Register */  
-  maxWrite(REG_MAX_PCSCR,   0x0 << 14  /* PCS link timer has normal timeout */
-                          | 0x0 << 13  /* Enable PCS receive running disparity */  
-                          | 0x0 << 12  /* Enable PCS transmit running disparity */  
-                          | 0x0 << 6   /* Restart auto-negotiation after 5 seconds */  
-                          | 0x0 << 4   /* SGMII PCS mode selected */  
-                          | 0x0 << 1   /* Disable terminal loopback */
-                          | 0x1 << 0   /* Enable comma alignment */
-  );             
-  
   /* Set RGMII-1000 parallel interface mode */  
   maxWrite(REG_MAX_GMIICR,  0x2 << 14  /* 1000 Mbps GMII RGMII-1000 */
                           | 0x0 << 13  /* TBI with one 125MHz receive clock (RXCLK pin) */
@@ -148,27 +138,33 @@ static int8 maxConfig(void)
                           | 0x1 << 7   /* Write as 1 */                          
                           | 0x0 << 3   /* Noninverted */
                           | 0x0 << 0   /* Disable remote loopback */
+  );  
+  
+  /* Set 1000BASE-X serial interface mode */
+  maxWrite(REG_MAX_PCSCR,   0x0 << 14  /* PCS link timer has normal timeout */
+                          | 0x0 << 13  /* Enable PCS receive running disparity */  
+                          | 0x0 << 12  /* Enable PCS transmit running disparity */  
+                          | 0x0 << 6   /* Restart auto-negotiation after 5 seconds */  
+                          | 0x0 << 4   /* 1000BASE-X PCS mode selected */  
+                          | 0x0 << 1   /* Disable terminal loopback */
+                          | 0x1 << 0   /* Enable comma alignment */
+  ); 
+  
+  /* Set 1000BASE-X auto-negotiation TX advertisement */
+  maxWrite(REG_MAX_AN_ADV,  0x0 << 15  /* Next Page capability is not supported */
+                          | 0x0 << 12  /* No Error, Link OK */  
+                          | 0x0 << 7   /* No Pause */  
+                          | 0x0 << 6   /* Half duplex is not supported */
+                          | 0x1 << 5   /* Advertise full duplex capability */
   );
-  
-  /* Set Auto-Negotiation Advertisement */  
-  maxWrite(REG_MAX_AN_ADV,  0x9801
+
+  /* Enable auto-negotiation */
+  maxWrite(REG_MAX_BMCR, 0x0 << 15  /* No reset */
+                       | 0x0 << 14  /* Loopback diagnostic */
+                       | 0x1 << 12  /* Enable auto-negotiation process */ 
+                       | 0x1 << 9   /* Restart auto-negotiation */ 
+                       | 0x0 << 7   /* No collision test */ 
   );  
-  
-  /* Set PTP Control Register 1 */  
-  maxWrite(REG_MAX_PTPCR1,  0x1 << 14  /* Write 1 */
-                          | 0x0 << 5   /* TX PLL Power-down disabled */
-                          | 0x1 << 3   /* Serial Interface Transmit Power-down disabled */
-                          | 0x1 << 2   /* Serial Interface Receive Power-down disabled */                          
-  );    
-  
-  /* Set PTP Control Register 1 */  
-  maxWrite(REG_MAX_PTPCR1,  0x1 << 14  /* Write 1 */
-                          | 0x0 << 5   /* TX PLL Power-down disabled */
-                          | 0x0 << 3   /* Serial Interface Transmit Power-down disabled */
-                          | 0x0 << 2   /* Serial Interface Receive Power-down disabled */                          
-  );  
-  
-  value = maxRead(REG_MAX_AN_ADV);  
 
   do{
     /* Create comparison P0.2 on CP+ with VDD/2 on CP- */
@@ -229,7 +225,7 @@ static int8 kszConfig(void)
                        | 0x1 << 12  /* Enable auto-negotiation process */ 
                        | 0x0 << 11  /* Power-Down: Normal operation  */
                        | 0x0 << 10  /* Isolate: Normal operation */ 
-                       | 0x1 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x1 << 9   /* Restart auto-negotiation */ 
                        | 0x0 << 8   /* Duplex Mode: Full-duplex */ 
                        | 0x0 << 6   /* Speed Select (MSB): 10 Mbps if auto-negotiation is disabled */
   );
@@ -279,7 +275,7 @@ static int8 kszConfig(void)
                        | 0x0 << 12  /* Disable auto-negotiation process */ 
                        | 0x0 << 11  /* Power-Down: Normal operation  */
                        | 0x0 << 10  /* Isolate: Normal operation */ 
-                       | 0x0 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x0 << 9   /* Restart auto-negotiation */ 
                        | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
                        | 0x0 << 6   /* Speed Select (MSB): 100 Mbps if auto-negotiation is disabled */
   ); 
@@ -294,7 +290,7 @@ static int8 kszConfig(void)
                        | 0x1 << 12  /* Enable auto-negotiation process */ 
                        | 0x0 << 11  /* Power-Down: Normal operation  */
                        | 0x0 << 10  /* Isolate: Normal operation */ 
-                       | 0x1 << 9   /* Restart Auto-Negotiation: Normal operation */ 
+                       | 0x1 << 9   /* Restart auto-negotiation */ 
                        | 0x1 << 8   /* Duplex Mode: Full-duplex */ 
                        | 0x1 << 6   /* Speed Select (MSB): 1000 Mbps if auto-negotiation is disabled */
   );  
