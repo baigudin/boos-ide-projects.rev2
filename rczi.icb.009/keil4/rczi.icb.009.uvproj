@@ -174,7 +174,7 @@
           <Target51Misc>
             <MemoryModel>1</MemoryModel>
             <RTOS>0</RTOS>
-            <RomSize>1</RomSize>
+            <RomSize>2</RomSize>
             <DataHold>0</DataHold>
             <XDataHold>0</XDataHold>
             <UseOnchipRom>0</UseOnchipRom>
@@ -296,7 +296,7 @@
             <InterruptVectorAddress>0</InterruptVectorAddress>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>BOOS_TYPE_C_STANDARD,BOOS_RESTARTING</Define>
+              <Define>BOOS_TYPE_C_STANDARD</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\..\boos-core-microbe\boos\include</IncludePath>
             </VariousControls>
@@ -379,11 +379,6 @@
               <FileName>Main.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\Main.c</FilePath>
-            </File>
-            <File>
-              <FileName>boos.util.Memory.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\util\boos.util.Memory.c</FilePath>
             </File>
             <File>
               <FileName>boos.system.Main.c</FileName>

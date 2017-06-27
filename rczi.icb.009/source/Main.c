@@ -15,27 +15,117 @@
 #include "driver.Ksz.h"
 #include "driver.Registers.h"
 
+
 /**
  * Error code blink time in milliseconds. 
  */
 #define ERROR_CODE_BLINK_TIME (500)
 
 /**
- * The board state.
+ * Data active blink time in milliseconds. 
  */
-typedef struct _Board
-{
-  struct _Resource
-  {
-    int8 cmp[2];
-    int8 exi[2];    
-  } res;
-} Board;
+#define DATA_ACTIVE_BLINK_TIME (50)
 
 /**
- * The board state.
+ * Number of PHY chips. 
  */
-static Board board_;
+#define CHIPS_NUMBER (2)
+
+/**
+ * MAX24287 chip index. 
+ */
+#define MAX (0)
+
+/**
+ * KSZ9031RNX chip index. 
+ */
+#define KSZ (1)
+
+/**
+ * The application data.
+ */
+typedef struct _App
+{
+  /**
+   * The board chips resources.
+   */  
+  struct _Resource
+  {
+    /**
+     * Comparator resource.
+     */
+    int8 cmpInt;
+
+    /**
+     * External interrupt resource.
+     */    
+    int8 extInt;    
+    
+  } res[CHIPS_NUMBER];
+  
+  /**
+   * The app timer resource.
+   */  
+  int8 resTim;  
+  
+  /**
+   * The app timer interrupt resource.
+   */  
+  int8 resInt;
+  
+  /**
+   * Led resource.
+   */    
+  enum Led led[CHIPS_NUMBER];  
+  
+  /**
+   * The board chips link status.
+   */  
+  int8 link[CHIPS_NUMBER];  
+  
+  /**
+   * The board chips active status.
+   */  
+  int8 active[CHIPS_NUMBER];
+
+  /**
+   * The board chips blinking active status.
+   */  
+  int8 blink[CHIPS_NUMBER];
+
+  /**
+   * App termination flag.
+   */
+  int8 terminate;
+  
+} App;
+
+/**
+ * The application data.
+ */
+static App app_;
+
+/**
+ * Interrupt handler of INT 0.
+ */
+static void handlerInterrupt0(void)
+{
+  if(app_.link[MAX])
+  {
+    app_.active[MAX] = 1;    
+  }
+}
+
+/**
+ * Interrupt handler of INT 1.
+ */
+static void handlerInterrupt1(void)
+{
+  if(app_.link[KSZ])
+  {
+    app_.active[KSZ] = 1;    
+  }
+}
 
 /**
  * Interrupt handler of CP0.
@@ -53,20 +143,14 @@ static void handlerComparator0(int8 out)
 {
   if(out == 0)
   {
-    ledSwitch(LED_X, 0);
+    ledSwitch(app_.led[MAX], 0);
+    app_.link[MAX] = 0;
   }
   else
   {
-    ledSwitch(LED_X, 1);    
+    ledSwitch(app_.led[MAX], 1);    
+    app_.link[MAX] = 1;
   }
-}
-
-/**
- * Interrupt handler of INT 0.
- */
-static void handlerInterrupt0(void)
-{
-//  if( ledIsSwitchedOn(LED_X) ){}
 }
 
 /**
@@ -83,23 +167,28 @@ static void handlerInterrupt0(void)
  */
 static void handlerComparator1(int8 out)
 {
-  int16 bs = kszRead(REG_KSZ_BMSR);
   if(out == 0)
   {
-    ledSwitch(LED_T, 1);        
+    ledSwitch(app_.led[KSZ], 1);        
+    app_.link[KSZ] = 1;    
   }
   else
   {
-    ledSwitch(LED_T, 0);    
+    ledSwitch(app_.led[KSZ], 0);
+    app_.link[KSZ] = 0;
   }  
 }
 
 /**
- * Interrupt handler of INT 1.
+ * Configures comman resources.
+ *
+ * @return error code or zero.
  */
-static void handlerInterrupt1(void)
+static int8 commonConfig(void)
 {
-  //ledToggle(LED_T);  
+  app_.led[MAX] = LED_X;
+  app_.led[KSZ] = LED_T;
+  return BOOS_OK;
 }
 
 /**
@@ -168,17 +257,17 @@ static int8 maxConfig(void)
 
   do{
     /* Create comparison P0.2 on CP+ with VDD/2 on CP- */
-    board_.res.cmp[0] = comparatorCreate(&handlerComparator0, 0, 0xD, 0x1);
-    if(board_.res.cmp[0] == 0)
+    app_.res[MAX].cmpInt = comparatorCreate(&handlerComparator0, 0, 0xD, 0x1);
+    if(app_.res[MAX].cmpInt == 0)
     {
       error = BOOS_ERROR;      
       break;
     }
-    comparatorIntEnable(board_.res.cmp[0], 1);
+    comparatorIntEnable(app_.res[MAX].cmpInt, 1);
     
     /* Create interrupts for the link activity */    
-    board_.res.exi[0] = interruptCreate(&handlerInterrupt0, 0);
-    if(board_.res.exi[0] == 0)
+    app_.res[MAX].extInt = interruptCreate(&handlerInterrupt0, 0);
+    if(app_.res[MAX].extInt == 0)
     {
       error = BOOS_ERROR;
       break;
@@ -192,7 +281,7 @@ static int8 maxConfig(void)
     REG_IT01CF |= 0x1 << 3  /* INT0 input is active high */
                |  0x1 << 0; /* INT0 is P0.1 */        
     
-    interruptEnable(board_.res.exi[0], 1);        
+    interruptEnable(app_.res[MAX].extInt, 1);        
 
   }while(0);
   return error;
@@ -297,17 +386,17 @@ static int8 kszConfig(void)
  
   do{
     /* Create comparison P1.6 on CP+ with VDD/2 on CP- */
-    board_.res.cmp[1] = comparatorCreate(&handlerComparator1, 1, 0xD, 0x7);
-    if(board_.res.cmp[1] == 0)
+    app_.res[KSZ].cmpInt = comparatorCreate(&handlerComparator1, 1, 0xD, 0x7);
+    if(app_.res[KSZ].cmpInt == 0)
     {
       error = BOOS_ERROR;      
       break;
     }
-    comparatorIntEnable(board_.res.cmp[1], 1);
+    comparatorIntEnable(app_.res[KSZ].cmpInt, 1);
     
     /* Create interrupts for the link activity */
-    board_.res.exi[1] = interruptCreate(&handlerInterrupt1, 2);
-    if(board_.res.exi[1] == 0)
+    app_.res[KSZ].extInt = interruptCreate(&handlerInterrupt1, 2);
+    if(app_.res[KSZ].extInt == 0)
     {
       error = BOOS_ERROR;
       break;
@@ -321,24 +410,62 @@ static int8 kszConfig(void)
     REG_IT01CF |= 0x0 << 7  /* INT1 input is active low */
                |  0x0 << 4; /* INT1 is P0.0 */
     
-    interruptEnable(board_.res.exi[1], 1);
-
-    /* Create timer interrupt for the link activity */
-    //board_.res.exi[1] = interruptCreate(&handlerInterrupt1, 2);
+    interruptEnable(app_.res[KSZ].extInt, 1);
 
   }while(0);
   return error;
 }
 
 /**
- * Executes machine states.
+ * Executes the application.
  */
-void machine(void)
+void application(void)
 {
-  volatile int8 exe = 1;
-  while(exe)
+  int8 i;
+  while( app_.terminate == 0 )
   {
+    /* Check for blinking */
+    for(i=0; i<CHIPS_NUMBER; i++)
+    {
+      if(app_.link[i] == 1)
+      {
+        if(app_.active[i] == 1)
+        {
+          app_.blink[i] = 1;
+          app_.active[i] = 0;
+        }
+      }    
+      else
+      {
+        ledSwitch(app_.led[i], 0);
+      }
+    }
+    
+    /* Start to blink checked leds */    
+    threadSleep(DATA_ACTIVE_BLINK_TIME);
+    for(i=0; i<CHIPS_NUMBER; i++)
+    {
+      if(app_.blink[i] == 1)
+      {
+        ledSwitch(app_.led[i], 0);
+      }    
+    }       
+    threadSleep(DATA_ACTIVE_BLINK_TIME);
+    for(i=0; i<CHIPS_NUMBER; i++)
+    {
+      if(app_.blink[i] == 1)
+      {
+        ledSwitch(app_.led[i], 1);
+        app_.blink[i] = 0;
+      }    
+    }
+
   };
+  
+  for(i=0; i<CHIPS_NUMBER; i++)
+  {
+    ledSwitch(app_.led[i], 0);  
+  }
 }
 
 /**
@@ -355,35 +482,42 @@ int8 mainStart(void)
     
     /* Stage 1 */
     stage++;    
+    error = commonConfig();    
+    if(error != BOOS_OK){ break; }     
+    
+    /* Stage 2 */
+    stage++;    
     error = maxConfig();    
     if(error != BOOS_OK){ break; } 
     
-    /* Stage 2 */
+    /* Stage 3 */
     stage++;    
     error = kszConfig();    
     if(error != BOOS_OK){ break; }
 
     /* Stage complete */    
     stage = 0;
-    machine();
+    application();
     
   }while(0);
+  
   /* Blink an error code */
   while(error != BOOS_OK)
   {
-    ledSwitch(LED_X, 1);
+    ledSwitch(app_.led[MAX], 1);
     for(i=0; i<stage; i++)
     {
-      ledSwitch(LED_T, 1);
+      ledSwitch(app_.led[KSZ], 1);
       threadSleep(ERROR_CODE_BLINK_TIME);
-      ledSwitch(LED_T, 0);
+      ledSwitch(app_.led[KSZ], 0);
       if(i + 1 != stage)
       {
         threadSleep(ERROR_CODE_BLINK_TIME);
       }
     }
-    ledSwitch(LED_X, 0);
+    ledSwitch(app_.led[MAX], 0);
     threadSleep(ERROR_CODE_BLINK_TIME << 1);
   }
+  
   return error;
 }
