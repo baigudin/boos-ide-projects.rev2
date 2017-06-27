@@ -351,84 +351,89 @@
           <GroupName>source</GroupName>
           <Files>
             <File>
-              <FileName>boos.system.main.c</FileName>
+              <FileName>Board.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.main.c</FilePath>
+              <FilePath>..\source\Board.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.interrupt.c</FileName>
+              <FileName>driver.Ksz.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.interrupt.c</FilePath>
+              <FilePath>..\source\driver.Ksz.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.pll.c</FileName>
+              <FileName>driver.Led.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.pll.c</FilePath>
+              <FilePath>..\source\driver.Led.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.processor.c</FileName>
+              <FileName>driver.Max.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.processor.c</FilePath>
+              <FilePath>..\source\driver.Max.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.timer.c</FileName>
+              <FileName>driver.Mdio.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.timer.c</FilePath>
+              <FilePath>..\source\driver.Mdio.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.watchdog.c</FileName>
+              <FileName>Main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.watchdog.c</FilePath>
+              <FilePath>..\source\Main.c</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.boot.ll.asm</FileName>
+              <FileName>boos.util.Memory.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\util\boos.util.Memory.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.system.Main.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.Main.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.system.Thread.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.Thread.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Comparator.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Comparator.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Interrupt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Interrupt.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Pll.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Pll.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Processor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Processor.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Watchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Watchdog.c</FilePath>
+            </File>
+            <File>
+              <FileName>boos.driver.Boot.ll.asm</FileName>
               <FileType>2</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.boot.ll.asm</FilePath>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Boot.ll.asm</FilePath>
             </File>
             <File>
-              <FileName>boos.driver.interrupt.ll.asm</FileName>
+              <FileName>boos.driver.Interrupt.ll.asm</FileName>
               <FileType>2</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.interrupt.ll.asm</FilePath>
-            </File>
-            <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\main.c</FilePath>
-            </File>
-            <File>
-              <FileName>boos.system.thread.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\system\boos.system.thread.c</FilePath>
-            </File>
-            <File>
-              <FileName>driver.max.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\driver.max.c</FilePath>
-            </File>
-            <File>
-              <FileName>driver.mdio.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\driver.mdio.c</FilePath>
-            </File>
-            <File>
-              <FileName>driver.ksz.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\driver.ksz.c</FilePath>
-            </File>
-            <File>
-              <FileName>driver.led.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\driver.led.c</FilePath>
-            </File>
-            <File>
-              <FileName>boos.driver.comparator.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.comparator.c</FilePath>
-            </File>
-            <File>
-              <FileName>board.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\board.c</FilePath>
+              <FilePath>..\..\..\boos-core-microbe\boos\driver\siliconlabs\c8051f90x\boos.driver.Interrupt.ll.asm</FilePath>
             </File>
           </Files>
         </Group>
