@@ -15,16 +15,29 @@
 #include "driver.Ksz.h"
 #include "driver.Registers.h"
 
-
 /**
  * Error code blink time in milliseconds. 
  */
-#define ERROR_CODE_BLINK_TIME (500)
+#define ERROR_CODE_BLINK_TIME (500ul)
+
+/**
+ * Data active blink time in milliseconds.
+ */
+#define LINK_ACTIVE_BLINK_TIME (60ul)
+
+/**
+ * HW timer period in microseconds.
+ * 
+ * The used eight-bit timer must have 503 us period as maximum.
+ * Any other more values will be cropped by the driver to the maximum,
+ * and the final result of blink time won't be correct.
+ */
+#define TIMER_PERIOD (500ul)
 
 /**
  * Data active blink time in milliseconds. 
  */
-#define DATA_ACTIVE_BLINK_TIME (50)
+#define LINK_ACTIVE_BLINK_TICS ( 1000ul * LINK_ACTIVE_BLINK_TIME / TIMER_PERIOD )
 
 /**
  * Number of PHY chips. 
@@ -40,6 +53,23 @@
  * KSZ9031RNX chip index. 
  */
 #define KSZ (1)
+
+/**
+ * The program available states.
+ */
+typedef enum _State
+{
+  /**
+   * Link status check. 
+   */
+  LINK_STATUS = 0x00,
+  
+  /** 
+   * Link activity check. 
+   */
+  LINK_ACTIVE = 0x01
+  
+} State;
 
 /**
  * The application data.
@@ -64,6 +94,35 @@ typedef struct _App
   } res[CHIPS_NUMBER];
   
   /**
+   * The board chips data.
+   */  
+  struct _Chip
+  {
+    /**
+     * Led resource.
+     */    
+    enum Led led;
+    
+    /**
+     * The board chips resources.
+     */  
+    struct _Link
+    { 
+      /**
+       * The board chips link status.
+       */  
+      int8 status;
+      
+      /**
+       * The board chips link active.
+       */  
+      int8 active;      
+      
+    } link;    
+    
+  } chip[CHIPS_NUMBER];  
+  
+  /**
    * The app timer resource.
    */  
   int8 resTim;  
@@ -74,29 +133,14 @@ typedef struct _App
   int8 resInt;
   
   /**
-   * Led resource.
-   */    
-  enum Led led[CHIPS_NUMBER];  
+   * The timer tics.
+   */  
+  uint16 tic;
   
-  /**
-   * The board chips link status.
-   */  
-  int8 link[CHIPS_NUMBER];  
-  
-  /**
-   * The board chips active status.
-   */  
-  int8 active[CHIPS_NUMBER];
-
-  /**
-   * The board chips blinking active status.
-   */  
-  int8 blink[CHIPS_NUMBER];
-
   /**
    * App termination flag.
    */
-  int8 terminate;
+  int8 terminated;
   
 } App;
 
@@ -106,24 +150,36 @@ typedef struct _App
 static App app_;
 
 /**
+ * Interrupt handler of Timer 1.
+ */
+static void handlerTimer(void)
+{
+  app_.tic++;
+}
+
+/**
  * Interrupt handler of INT 0.
+ *
+ * The handler serves MAX24287 chip link activity status.
  */
 static void handlerInterrupt0(void)
 {
-  if(app_.link[MAX])
+  if(app_.chip[MAX].link.status)
   {
-    app_.active[MAX] = 1;    
+    app_.chip[MAX].link.active = 1;    
   }
 }
 
 /**
  * Interrupt handler of INT 1.
+ *
+ * The handler serves KSZ9031RNX chip link activity status.
  */
 static void handlerInterrupt1(void)
 {
-  if(app_.link[KSZ])
+  if(app_.chip[KSZ].link.status)
   {
-    app_.active[KSZ] = 1;    
+    app_.chip[KSZ].link.active = 1;    
   }
 }
 
@@ -133,8 +189,8 @@ static void handlerInterrupt1(void)
  * The handler serves MAX24287 chip output real-time link status.
  * It is initialized to get interrupt by rising-edge and falling-edge of
  * a signal, which goes out from GPIO1 pin of the chip and goes in to P0.2
- * of the CPU. Having gotten zero value as the agrument of the function, which is 
- * a result of comparation of the signal and VDD divided by 2, the function
+ * of the CPU. Having gotten zero value as the argument of the function, which is 
+ * a result of comparison of the signal and VDD divided by 2, the function
  * interprets that as the link is down, otherwise the link is up.
  *
  * @param out an output comparator value.
@@ -143,13 +199,11 @@ static void handlerComparator0(int8 out)
 {
   if(out == 0)
   {
-    ledSwitch(app_.led[MAX], 0);
-    app_.link[MAX] = 0;
+    app_.chip[MAX].link.status = 0;
   }
   else
   {
-    ledSwitch(app_.led[MAX], 1);    
-    app_.link[MAX] = 1;
+    app_.chip[MAX].link.status = 1;
   }
 }
 
@@ -159,8 +213,8 @@ static void handlerComparator0(int8 out)
  * The handler serves KSZ9031RNX chip output real-time link status in Single-LED Mode.
  * It is initialized to get interrupt by rising-edge and falling-edge of
  * a signal, which goes out from LED2 pin of the chip and goes in to P1.6
- * of the CPU. Having gotten zero value as the agrument of the function, which is 
- * a result of comparation of the signal and VDD divided by 2, the function
+ * of the CPU. Having gotten zero value as the argument of the function, which is 
+ * a result of comparison of the signal and VDD divided by 2, the function
  * interprets that as the link is up, otherwise the link is down.
  *
  * @param out an output comparator value.
@@ -169,13 +223,11 @@ static void handlerComparator1(int8 out)
 {
   if(out == 0)
   {
-    ledSwitch(app_.led[KSZ], 1);        
-    app_.link[KSZ] = 1;    
+    app_.chip[KSZ].link.status = 1;    
   }
   else
   {
-    ledSwitch(app_.led[KSZ], 0);
-    app_.link[KSZ] = 0;
+    app_.chip[KSZ].link.status = 0;
   }  
 }
 
@@ -186,9 +238,32 @@ static void handlerComparator1(int8 out)
  */
 static int8 commonConfig(void)
 {
-  app_.led[MAX] = LED_X;
-  app_.led[KSZ] = LED_T;
-  return BOOS_OK;
+  int8 error = BOOS_OK;
+  app_.chip[MAX].led = LED_X;
+  app_.chip[KSZ].led = LED_T;
+  do{
+    
+    /* Create timer 1 */
+    app_.resTim = timerCreate(1);
+    if(app_.resTim == 0)
+    {
+      error = BOOS_ERROR;      
+      break;
+    }
+    timerSetPeriod(app_.resTim, TIMER_PERIOD);
+    timerStart(app_.resTim);
+    
+    /* Create interrupts of timer 1 */    
+    app_.resInt = interruptCreate(&handlerTimer, 3);
+    if(app_.resInt == 0)
+    {
+      error = BOOS_ERROR;
+      break;
+    }
+    interruptEnable(app_.resInt, 1);       
+    
+  }while(0);
+  return error;
 }
 
 /**
@@ -336,7 +411,7 @@ static int8 kszConfig(void)
                            | 0x0 << 7   /* Not override strap-in for chip power-down mode */
                            | 0x0 << 4   /* Not override strap-in for NAND Tree mode */ 
                            | 0x1 << 0   /* The bit is described as reserved, but it must be set to one
-                                           for overriding the straped options */
+                                           for overriding the strapped options */
   );   
 
   /* Make software reset of the device */
@@ -417,55 +492,79 @@ static int8 kszConfig(void)
 }
 
 /**
+ * Returns the current timer tic value.
+ *
+ * @return current tic.
+ */
+static uint16 getTic(void)
+{
+  int8 is;
+  uint16 tic;
+  is = interruptDisable(app_.resInt);
+  tic = app_.tic;
+  interruptEnable(app_.resInt, is);  
+  return tic;
+}
+
+/**
  * Executes the application.
  */
 void application(void)
 {
-  int8 i;
-  while( app_.terminate == 0 )
+  int8 i, active;
+  uint16 tic;
+  State stage = LINK_STATUS;  
+  tic = getTic();
+  while( app_.terminated == 0 )
   {
-    /* Check for blinking */
-    for(i=0; i<CHIPS_NUMBER; i++)
+    /* Test the leds status */
+    if( getTic() - tic >= LINK_ACTIVE_BLINK_TICS )
     {
-      if(app_.link[i] == 1)
+      tic = getTic();
+      switch(stage)
       {
-        if(app_.active[i] == 1)
+        /* Link status checking */
+        case LINK_STATUS:
         {
-          app_.blink[i] = 1;
-          app_.active[i] = 0;
+          for(i=0; i<CHIPS_NUMBER; i++)
+          {
+            if(app_.chip[i].link.status == 1)
+            {
+              ledSwitch(app_.chip[i].led, 1);
+            }
+            else
+            {
+              ledSwitch(app_.chip[i].led, 0);            
+            }
+          }            
+          stage = LINK_ACTIVE;
         }
-      }    
-      else
-      {
-        ledSwitch(app_.led[i], 0);
+        break;
+        /* Link activity checking */        
+        case LINK_ACTIVE:
+        {
+          active = 0;
+          for(i=0; i<CHIPS_NUMBER; i++)
+          {
+            if(app_.chip[i].link.active == 1)
+            {
+              active |= app_.chip[i].link.active;
+              app_.chip[i].link.active = 0;              
+            }    
+          }                     
+          for(i=0; i<CHIPS_NUMBER; i++)
+          {
+            if(app_.chip[i].link.status == 1 && active == 1)
+            {
+              ledSwitch(app_.chip[i].led, 0);
+            }    
+          }           
+          stage = LINK_STATUS;          
+        } 
+        break;                  
       }
     }
-    
-    /* Start to blink checked leds */    
-    threadSleep(DATA_ACTIVE_BLINK_TIME);
-    for(i=0; i<CHIPS_NUMBER; i++)
-    {
-      if(app_.blink[i] == 1)
-      {
-        ledSwitch(app_.led[i], 0);
-      }    
-    }       
-    threadSleep(DATA_ACTIVE_BLINK_TIME);
-    for(i=0; i<CHIPS_NUMBER; i++)
-    {
-      if(app_.blink[i] == 1)
-      {
-        ledSwitch(app_.led[i], 1);
-        app_.blink[i] = 0;
-      }    
-    }
-
   };
-  
-  for(i=0; i<CHIPS_NUMBER; i++)
-  {
-    ledSwitch(app_.led[i], 0);  
-  }
 }
 
 /**
@@ -504,18 +603,18 @@ int8 mainStart(void)
   /* Blink an error code */
   while(error != BOOS_OK)
   {
-    ledSwitch(app_.led[MAX], 1);
+    ledSwitch(app_.chip[MAX].led, 1);
     for(i=0; i<stage; i++)
     {
-      ledSwitch(app_.led[KSZ], 1);
+      ledSwitch(app_.chip[KSZ].led, 1);
       threadSleep(ERROR_CODE_BLINK_TIME);
-      ledSwitch(app_.led[KSZ], 0);
+      ledSwitch(app_.chip[KSZ].led, 0);
       if(i + 1 != stage)
       {
         threadSleep(ERROR_CODE_BLINK_TIME);
       }
     }
-    ledSwitch(app_.led[MAX], 0);
+    ledSwitch(app_.chip[MAX].led, 0);
     threadSleep(ERROR_CODE_BLINK_TIME << 1);
   }
   
