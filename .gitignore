@@ -20,6 +20,7 @@ Release
 *.launch
 
 # Keil project files
+*.hex
 *.lnp
 *.m51
 *.plg
