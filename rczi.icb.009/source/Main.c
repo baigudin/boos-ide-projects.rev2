@@ -23,7 +23,12 @@
 /**
  * Data active blink time in milliseconds.
  */
-#define LINK_ACTIVE_BLINK_TIME (60ul)
+#define LINK_ACTIVE_BLINK_TIME (70ul)
+
+/**
+ * Data active capture time in milliseconds.
+ */
+#define LINK_ACTIVE_CAPTURE_TIME (2000ul)
 
 /**
  * HW timer period in microseconds.
@@ -35,9 +40,28 @@
 #define TIMER_PERIOD (500ul)
 
 /**
- * Data active blink time in milliseconds. 
+ * Data active blink time in tics. 
  */
 #define LINK_ACTIVE_BLINK_TICS ( 1000ul * LINK_ACTIVE_BLINK_TIME / TIMER_PERIOD )
+
+/**
+ * Data active capture time in tics. 
+ */
+#define LINK_ACTIVE_CAPTURE_TICS ( 1000ul * LINK_ACTIVE_CAPTURE_TIME / TIMER_PERIOD )
+
+/**
+ * No data capture time in tics.
+ * 
+ * Note: multiplying on two is because led blink processing has two stages.
+ */
+#define LINK_NO_ACTIVE_CAPTURE_TICS ( LINK_ACTIVE_BLINK_TICS * 2 )
+
+/**
+ * Number of buffers for capturing link activity. 
+ *
+ * Note: the number must constantly equal to two. Other cases might crash the program.
+ */
+#define CAPTURE_BUFS (2)
 
 /**
  * Number of PHY chips. 
@@ -509,18 +533,66 @@ static uint16 getTic(void)
 /**
  * Executes the application.
  */
-void application(void)
+static void application(void)
 {
-  int8 i, active;
-  uint16 tic;
+  int8 i, c, link, captured, capturing, active[CAPTURE_BUFS][CHIPS_NUMBER];
+  uint16 ticBlink, ticCapture, ticCaptureMax, tic;
   State stage = LINK_STATUS;  
-  tic = getTic();
+  ticBlink = ticCapture = getTic();
+  captured = 0;
+  capturing = 1;
+  for(c=0; c<CAPTURE_BUFS; c++)  
+  {
+    for(i=0; i<CHIPS_NUMBER; i++)
+    {
+      active[c][i] = 0;
+    }
+  }
   while( app_.terminated == 0 )
   {
-    /* Test the leds status */
-    if( getTic() - tic >= LINK_ACTIVE_BLINK_TICS )
+    tic = getTic();
+    /* Vary the time of link active capture */
+    for(i=0, link = 0; i<CHIPS_NUMBER; i++)
     {
-      tic = getTic();
+      link |= app_.chip[i].link.status << i;
+    }
+    switch(link)
+    {
+      /* Link of one device is presented */
+      case 1:
+      case 2:        
+      {
+        ticCaptureMax = LINK_NO_ACTIVE_CAPTURE_TICS;
+      }
+      break;
+      /* Links of the both devices are presented */
+      case 3:
+      default:        
+      {
+        ticCaptureMax = LINK_ACTIVE_CAPTURE_TICS;
+      }
+      break;
+    }
+    /* Test needing of capture buffer switching */
+    if( tic - ticCapture >= ticCaptureMax )
+    {
+      ticCapture = tic;
+      for(i=0; i<CHIPS_NUMBER; i++)
+      {
+        active[capturing][i] = 0;
+        if(app_.chip[i].link.active == 1)
+        {
+          app_.chip[i].link.active = 0;          
+          active[capturing][i] = 1;
+        }    
+      }
+      captured = capturing;
+      capturing = capturing + 1 & 0x1;
+    }      
+    /* Test the leds status */
+    if( tic - ticBlink >= LINK_ACTIVE_BLINK_TICS )
+    {
+      ticBlink = tic;
       switch(stage)
       {
         /* Link status checking */
@@ -543,25 +615,20 @@ void application(void)
         /* Link activity checking */        
         case LINK_ACTIVE:
         {
-          active = 0;
           for(i=0; i<CHIPS_NUMBER; i++)
           {
-            if(app_.chip[i].link.active == 1)
-            {
-              active |= app_.chip[i].link.active;
-              app_.chip[i].link.active = 0;              
-            }    
-          }                     
-          for(i=0; i<CHIPS_NUMBER; i++)
-          {
-            if(app_.chip[i].link.status == 1 && active == 1)
+            if(active[captured][i] == 1)
             {
               ledSwitch(app_.chip[i].led, 0);
             }    
-          }           
+          }                     
           stage = LINK_STATUS;          
         } 
-        break;                  
+        break;
+        default:
+        {
+        }
+        break;
       }
     }
   };

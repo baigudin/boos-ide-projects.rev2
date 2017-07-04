@@ -12,27 +12,27 @@
 /**
  * The device reset port mask.
  */
-#define RESET_PORT_MASK (0x08)
+#define RESET_PORT_MASK (0x08u)
 
 /**
  * Access to PHY or MMD register mask.
  */
-#define REG_PHY_MMD_MASK (0x8000)
+#define REG_PHY_MMD_MASK (0x8000u)
 
 /**
  * PHY register address mask.
  */
-#define REG_PHY_RA_MASK  (0x001F)
+#define REG_PHY_RA_MASK  (0x001Fu)
 
 /**
  * MMD device address mask.
  */
-#define REG_MMD_DA_MASK  (0x7F00)
+#define REG_MMD_DA_MASK  (0x7F00u)
 
 /**
  * MMD register address mask.
  */
-#define REG_MMD_RA_MASK  (0x001F)
+#define REG_MMD_RA_MASK  (0x001Fu)
 
 /**
  * Reset pin of MCU port.
@@ -148,7 +148,7 @@ int8 kszInit(void)
   for(phyAddr_=1; phyAddr_<8; phyAddr_++)
   {
     val = mdioRead(phyAddr_, REG_KSZ_ID2);
-    if( (val & 0xfff0) == 0x1620 )
+    if( (val & 0xfff0u) == 0x1620u )
     {
       error = BOOS_OK;
       break;

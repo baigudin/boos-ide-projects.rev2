@@ -159,7 +159,7 @@ int8 maxInit(void)
       mdioWrite(PHY_ADDR, REG_MAX_PTPCR1 & REG_ADDR_MASK, 0x4000);
       /* Set the BMCR.DP_RST bit to reset the datapath */
       mdioWrite(PHY_ADDR, REG_MAX_PAGESEL, 0x0010);
-      mdioWrite(PHY_ADDR, REG_MAX_BMCR & REG_ADDR_MASK, 0x8000);
+      mdioWrite(PHY_ADDR, REG_MAX_BMCR & REG_ADDR_MASK, 0x8000u);
     }  
     else
     {

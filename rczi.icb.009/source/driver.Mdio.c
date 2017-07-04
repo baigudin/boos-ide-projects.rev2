@@ -53,7 +53,7 @@ static void output(uint32 val, int8 num)
   for(val <<= (32 - num); num; val <<= 1, num--)
   {
     /* Set the value bit to MDO */
-    if(val & 0x80000000)
+    if(val & 0x80000000u)
     {
       mdio_ = 1;
     }
@@ -103,7 +103,7 @@ int16 mdioRead(int8 phyAddr, int8 regAddr)
   int16 val;  
   if(isInitialized_)
   {   
-    output(0xffffffff, 32);
+    output(0xffffffffu, 32);
     output(0x6, 4);
     output(phyAddr, 5);
     output(regAddr, 5);
@@ -129,7 +129,7 @@ void mdioWrite(int8 phyAddr, int8 regAddr, int16 value)
 {
   if(isInitialized_)
   {  
-    output(0xffffffff, 32);
+    output(0xffffffffu, 32);
     output(0x5, 4);
     output(phyAddr, 5);
     output(regAddr, 5);
