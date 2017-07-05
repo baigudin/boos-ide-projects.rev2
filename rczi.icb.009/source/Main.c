@@ -22,13 +22,10 @@
 
 /**
  * Data active blink time in milliseconds.
+ *
+ * The time when a led states in turn off.
  */
-#define LINK_ACTIVE_BLINK_TIME (70ul)
-
-/**
- * Data active capture time in milliseconds.
- */
-#define LINK_ACTIVE_CAPTURE_TIME (2000ul)
+#define DATA_ACTIVE_BLINK_TIME (60ul)
 
 /**
  * HW timer period in microseconds.
@@ -42,26 +39,7 @@
 /**
  * Data active blink time in tics. 
  */
-#define LINK_ACTIVE_BLINK_TICS ( 1000ul * LINK_ACTIVE_BLINK_TIME / TIMER_PERIOD )
-
-/**
- * Data active capture time in tics. 
- */
-#define LINK_ACTIVE_CAPTURE_TICS ( 1000ul * LINK_ACTIVE_CAPTURE_TIME / TIMER_PERIOD )
-
-/**
- * No data capture time in tics.
- * 
- * Note: multiplying on two is because led blink processing has two stages.
- */
-#define LINK_NO_ACTIVE_CAPTURE_TICS ( LINK_ACTIVE_BLINK_TICS * 2 )
-
-/**
- * Number of buffers for capturing link activity. 
- *
- * Note: the number must constantly equal to two. Other cases might crash the program.
- */
-#define CAPTURE_BUFS (2)
+#define DATA_ACTIVE_BLINK_TICS ( 1000ul * DATA_ACTIVE_BLINK_TIME / TIMER_PERIOD )
 
 /**
  * Number of PHY chips. 
@@ -89,9 +67,9 @@ typedef enum _State
   LINK_STATUS = 0x00,
   
   /** 
-   * Link activity check. 
+   * Data activity check. 
    */
-  LINK_ACTIVE = 0x01
+  DATA_ACTIVE = 0x01
   
 } State;
 
@@ -128,23 +106,16 @@ typedef struct _App
     enum Led led;
     
     /**
-     * The board chips resources.
+     * The board chips link status.
      */  
-    struct _Link
-    { 
-      /**
-       * The board chips link status.
-       */  
-      int8 status;
-      
-      /**
-       * The board chips link active.
-       */  
-      int8 active;      
-      
-    } link;    
+    int8 link;
     
-  } chip[CHIPS_NUMBER];  
+  } chip[CHIPS_NUMBER];
+
+  /**
+   * RGMII bus active.
+   */  
+  int8 active;    
   
   /**
    * The app timer resource.
@@ -184,27 +155,22 @@ static void handlerTimer(void)
 /**
  * Interrupt handler of INT 0.
  *
- * The handler serves MAX24287 chip link activity status.
+ * The handler serves MAX24287 chip RGMII data activity status.
  */
 static void handlerInterrupt0(void)
 {
-  if(app_.chip[MAX].link.status)
-  {
-    app_.chip[MAX].link.active = 1;    
-  }
+  app_.active = 1;
 }
 
 /**
  * Interrupt handler of INT 1.
  *
- * The handler serves KSZ9031RNX chip link activity status.
+ * The handler had served KSZ9031RNX chip link activity status 
+ * before it became to be unused. In the program this interrupt
+ * source should be disabled.
  */
 static void handlerInterrupt1(void)
 {
-  if(app_.chip[KSZ].link.status)
-  {
-    app_.chip[KSZ].link.active = 1;    
-  }
 }
 
 /**
@@ -223,11 +189,11 @@ static void handlerComparator0(int8 out)
 {
   if(out == 0)
   {
-    app_.chip[MAX].link.status = 0;
+    app_.chip[MAX].link = 0;
   }
   else
   {
-    app_.chip[MAX].link.status = 1;
+    app_.chip[MAX].link = 1;
   }
 }
 
@@ -247,11 +213,11 @@ static void handlerComparator1(int8 out)
 {
   if(out == 0)
   {
-    app_.chip[KSZ].link.status = 1;    
+    app_.chip[KSZ].link = 1;    
   }
   else
   {
-    app_.chip[KSZ].link.status = 0;
+    app_.chip[KSZ].link = 0;
   }  
 }
 
@@ -379,7 +345,8 @@ static int8 maxConfig(void)
     REG_IT01CF &= 0xFC;
     REG_IT01CF |= 0x1 << 3  /* INT0 input is active high */
                |  0x1 << 0; /* INT0 is P0.1 */        
-    
+
+    /* Enable the interrupt source */
     interruptEnable(app_.res[MAX].extInt, 1);        
 
   }while(0);
@@ -509,7 +476,8 @@ static int8 kszConfig(void)
     REG_IT01CF |= 0x0 << 7  /* INT1 input is active low */
                |  0x0 << 4; /* INT1 is P0.0 */
     
-    interruptEnable(app_.res[KSZ].extInt, 1);
+    /* Disable the interrupt source */
+    interruptDisable(app_.res[KSZ].extInt);
 
   }while(0);
   return error;
@@ -535,72 +503,23 @@ static uint16 getTic(void)
  */
 static void application(void)
 {
-  int8 i, c, link, captured, capturing, active[CAPTURE_BUFS][CHIPS_NUMBER];
-  uint16 ticBlink, ticCapture, ticCaptureMax, tic;
+  int8 i;
+  uint16 tic = getTic();
   State stage = LINK_STATUS;  
-  ticBlink = ticCapture = getTic();
-  captured = 0;
-  capturing = 1;
-  for(c=0; c<CAPTURE_BUFS; c++)  
-  {
-    for(i=0; i<CHIPS_NUMBER; i++)
-    {
-      active[c][i] = 0;
-    }
-  }
   while( app_.terminated == 0 )
   {
-    tic = getTic();
-    /* Vary the time of link active capture */
-    for(i=0, link = 0; i<CHIPS_NUMBER; i++)
-    {
-      link |= app_.chip[i].link.status << i;
-    }
-    switch(link)
-    {
-      /* Link of one device is presented */
-      case 1:
-      case 2:        
-      {
-        ticCaptureMax = LINK_NO_ACTIVE_CAPTURE_TICS;
-      }
-      break;
-      /* Links of the both devices are presented */
-      case 3:
-      default:        
-      {
-        ticCaptureMax = LINK_ACTIVE_CAPTURE_TICS;
-      }
-      break;
-    }
-    /* Test needing of capture buffer switching */
-    if( tic - ticCapture >= ticCaptureMax )
-    {
-      ticCapture = tic;
-      for(i=0; i<CHIPS_NUMBER; i++)
-      {
-        active[capturing][i] = 0;
-        if(app_.chip[i].link.active == 1)
-        {
-          app_.chip[i].link.active = 0;          
-          active[capturing][i] = 1;
-        }    
-      }
-      captured = capturing;
-      capturing = capturing + 1 & 0x1;
-    }      
     /* Test the leds status */
-    if( tic - ticBlink >= LINK_ACTIVE_BLINK_TICS )
+    if( getTic() - tic >= DATA_ACTIVE_BLINK_TICS )
     {
-      ticBlink = tic;
+      tic = getTic();
       switch(stage)
       {
         /* Link status checking */
         case LINK_STATUS:
         {
           for(i=0; i<CHIPS_NUMBER; i++)
-          {
-            if(app_.chip[i].link.status == 1)
+          {        
+            if(app_.chip[i].link != 0)
             {
               ledSwitch(app_.chip[i].led, 1);
             }
@@ -609,19 +528,20 @@ static void application(void)
               ledSwitch(app_.chip[i].led, 0);            
             }
           }            
-          stage = LINK_ACTIVE;
+          stage = DATA_ACTIVE;
         }
         break;
-        /* Link activity checking */        
-        case LINK_ACTIVE:
+        /* Data activity checking */        
+        case DATA_ACTIVE:
         {
-          for(i=0; i<CHIPS_NUMBER; i++)
-          {
-            if(active[captured][i] == 1)
+          if(app_.active != 0)
+          {    
+            app_.active = 0;
+            for(i=0; i<CHIPS_NUMBER; i++)
             {
-              ledSwitch(app_.chip[i].led, 0);
-            }    
-          }                     
+              ledSwitch(app_.chip[i].led, 0);              
+            }                     
+          }
           stage = LINK_STATUS;          
         } 
         break;
