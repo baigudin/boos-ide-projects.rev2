@@ -16,9 +16,14 @@
 #include "driver.Registers.h"
 
 /**
+ * Initialized code blink time in milliseconds. 
+ */
+#define INITIALIZED_BLINK_START_TIME (5ul)
+
+/**
  * Error code blink time in milliseconds. 
  */
-#define ERROR_CODE_BLINK_TIME (500ul)
+#define ERROR_BLINK_TIME (400ul)
 
 /**
  * Data active blink time in milliseconds.
@@ -555,13 +560,63 @@ static void application(void)
 }
 
 /**
+ * Blinks about successful initialization.
+ */
+static void completeBlink(void)
+{
+  int8 i;   
+  int16 time = INITIALIZED_BLINK_START_TIME;
+  for(i=0; i<12; i++)
+  {
+    if(i & 0x2)
+    {
+      time <<= 1;        
+    }
+    ledSwitch(app_.chip[i & 1].led, 1);
+    threadSleep(time);
+    ledSwitch(app_.chip[i & 1].led, 0);
+    threadSleep(time);
+  }
+  for(i=0; i<CHIPS_NUMBER; i++)
+  {    
+    ledSwitch(app_.chip[i].led, 0);
+  }
+  threadSleep(500);    
+}
+
+/**
+ * Blinks about successful initialization.
+ *
+ * @param error an occurred error.
+ * @param stage an stage when the error has been occurred.
+ */
+static void errorBlink(int8 error, int8 stage)
+{
+  int8 i;   
+  while(error != BOOS_OK)
+  {
+    ledSwitch(app_.chip[KSZ].led, 1);
+    threadSleep(ERROR_BLINK_TIME);    
+    for(i=0; i<stage; i++)
+    {
+      ledSwitch(app_.chip[MAX].led, 1);
+      threadSleep(ERROR_BLINK_TIME);
+      ledSwitch(app_.chip[MAX].led, 0);
+      threadSleep(ERROR_BLINK_TIME);
+    }
+    ledSwitch(app_.chip[KSZ].led, 0);
+    threadSleep(ERROR_BLINK_TIME << 1);
+  }  
+}
+
+/**
  * User program entry.
  *
  * @return error code or zero.
  */
 int8 mainStart(void)
 {
-  int8 i, stage, error;   
+  int8 stage, error;   
   stage = 0;
   error = BOOS_OK;
   do{
@@ -583,27 +638,14 @@ int8 mainStart(void)
 
     /* Stage complete */    
     stage = 0;
+    completeBlink();
     application();
     
   }while(0);
-  
   /* Blink an error code */
-  while(error != BOOS_OK)
+  if(error != BOOS_OK)
   {
-    ledSwitch(app_.chip[MAX].led, 1);
-    for(i=0; i<stage; i++)
-    {
-      ledSwitch(app_.chip[KSZ].led, 1);
-      threadSleep(ERROR_CODE_BLINK_TIME);
-      ledSwitch(app_.chip[KSZ].led, 0);
-      if(i + 1 != stage)
-      {
-        threadSleep(ERROR_CODE_BLINK_TIME);
-      }
-    }
-    ledSwitch(app_.chip[MAX].led, 0);
-    threadSleep(ERROR_CODE_BLINK_TIME << 1);
+    errorBlink(error, stage);
   }
-  
   return error;
 }
