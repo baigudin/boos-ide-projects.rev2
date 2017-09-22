@@ -12,7 +12,6 @@ Config="Debug"
 Config="Release"
 
 [Source Files]
-Source="..\..\..\boos-core.rev3\libraries\boos.ti.tms320f2833x.coff.debug.lib"
 Source="..\source\boos\boos.Board.cpp"
 Source="..\source\boos\boos.Configuration.cpp"
 Source="..\source\boos\boos.Main.cpp"
