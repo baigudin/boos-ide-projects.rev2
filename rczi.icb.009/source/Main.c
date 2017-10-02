@@ -227,7 +227,7 @@ static void handlerComparator1(int8 out)
 }
 
 /**
- * Configures comman resources.
+ * Configures common resources.
  *
  * @return error code or zero.
  */
